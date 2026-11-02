@@ -95,6 +95,19 @@
 - **FR-006**: System MUST authenticate users via [NEEDS CLARIFICATION: auth method not specified - email/password, SSO, OAuth?]
 - **FR-007**: System MUST retain user data for [NEEDS CLARIFICATION: retention period not specified]
 
+### Accessibility Requirements (WCAG 2.1 AA) *(mandatory per Constitution)*
+
+- **AR-001**: System MUST provide screen reader support (TalkBack/VoiceOver/Web) with accurate semantics, hints, and roles for all UI elements.
+- **AR-002**: System MUST guarantee color contrast ratio of at least 4.5:1 (normal text) and 3:1 (large text/UI components) and support high-contrast mode.
+- **AR-003**: System MUST support dynamic system font scaling without text clipping, truncation, or layout distortion.
+- **AR-004**: Interactive touch targets MUST be at least 48x48 dp with full keyboard/switch navigation capability.
+
+### Privacy & LGPD Requirements *(mandatory per Constitution)*
+
+- **PR-001**: System MUST collect only minimal data strictly required for feature fulfillment (data minimization).
+- **PR-002**: System MUST obtain explicit, granular consent prior to capturing or storing sensitive data (disability types, accessibility needs).
+- **PR-003**: System MUST support user rights to data review, export (portability), correction, and full deletion ("direito ao esquecimento").
+
 ### Key Entities *(include if feature involves data)*
 
 - **[Entity 1]**: [What it represents, key attributes without implementation]

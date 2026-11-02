@@ -31,7 +31,11 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+- [ ] **Gate 1 - Acessibilidade Universal (WCAG 2.1 AA/AAA)**: O design/solução especifica suporte a leitores de tela (TalkBack, VoiceOver), semântica correta (`Semantics`), contraste mínimo (4.5:1), tipografia escalável e alvos de toque >= 48x48 dp?
+- [ ] **Gate 2 - Código Limpo e Componentização**: A arquitetura respeita Clean Architecture (separação Apresentação/Domínio/Dados) e reutiliza/estende componentes modulares do Design System no Flutter?
+- [ ] **Gate 3 - Testabilidade e Alta Cobertura (>= 80%)**: O plano prevê testes automatizados (unitários, widgets com semântica de acessibilidade e integração) com meta de cobertura >= 80%?
+- [ ] **Gate 4 - Privacidade e LGPD**: Coleta mínima respeitada? Há gestão de consentimento explícito para dados sensíveis (deficiência/saúde)? Dados criptografados e direitos dos titulares assegurados?
+- [ ] **Gate 5 - Consistência Multiplataforma e Docker**: A solução funciona uniformemente em Flutter (Web, Android, iOS) e o backend (Node.js + PostgreSQL) está 100% conteinerizado via Docker/Docker Compose com migrações versionadas?
 
 ## Project Structure
 

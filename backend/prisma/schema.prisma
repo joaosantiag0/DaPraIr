@@ -1,0 +1,292 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id            String    @id @default(uuid()) @db.Uuid
+  email         String    @unique @db.VarChar(255)
+  password_hash String?   @db.VarChar(255)
+  name          String    @db.VarChar(100)
+  handle        String    @unique @db.VarChar(50)
+  avatar_url    String?   @db.VarChar(512)
+  bio           String?   @db.Text
+  role          String    @default("USER") @db.VarChar(20) // USER, MODERATOR, ADMIN
+  badges        String[]  @default([])
+  status        String    @default("ACTIVE") @db.VarChar(20) // ACTIVE, SUSPENDED, DELETED
+  is_anonymous  Boolean   @default(false)
+  created_at    DateTime  @default(now()) @db.Timestamptz
+  updated_at    DateTime  @default(now()) @updatedAt @db.Timestamptz
+
+  consents              UserConsent[]
+  accessibility_profile UserAccessibilityProfile?
+  reviews               PlaceReview[]
+  media                 PlaceMedia[]
+  favorites             UserFavorite[]
+  visit_history         PlaceVisitHistory[]
+  sent_connections      SocialConnection[]        @relation("SentConnections")
+  received_connections  SocialConnection[]        @relation("ReceivedConnections")
+  sent_messages         DirectMessage[]           @relation("SentMessages")
+  received_messages     DirectMessage[]           @relation("ReceivedMessages")
+  created_events        Event[]                   @relation("CreatedEvents")
+  event_rsvps           EventRSVP[]
+  filed_reports         ContentReport[]           @relation("FiledReports")
+  resolved_reports      ContentReport[]           @relation("ResolvedReports")
+
+  @@map("users")
+}
+
+model UserConsent {
+  id             String   @id @default(uuid()) @db.Uuid
+  user_id        String   @db.Uuid
+  consent_type   String   @db.VarChar(50) // TERMS_OF_SERVICE, PRIVACY_POLICY, SENSITIVE_ACCESSIBILITY_DATA, MARKETING
+  version        String   @db.VarChar(20)
+  granted        Boolean
+  granted_at     DateTime @default(now()) @db.Timestamptz
+  ip_address_hash String  @db.VarChar(64)
+  user_agent     String?  @db.VarChar(255)
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@map("user_consents")
+}
+
+model UserAccessibilityProfile {
+  id                String   @id @default(uuid()) @db.Uuid
+  user_id           String   @unique @db.Uuid
+  disability_types  String[] @default([])
+  assistance_needs  String[] @default([])
+  visibility        String   @default("PRIVATE") @db.VarChar(20) // PUBLIC, FRIENDS_ONLY, PRIVATE
+  encrypted_payload Bytes?
+  created_at        DateTime @default(now()) @db.Timestamptz
+  updated_at        DateTime @default(now()) @updatedAt @db.Timestamptz
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("user_accessibility_profiles")
+}
+
+model Place {
+  id               String    @id @default(uuid()) @db.Uuid
+  google_place_id  String?   @unique @db.VarChar(128)
+  source           String    @default("COMMUNITY") @db.VarChar(20) // COMMUNITY, GOOGLE_PLACES
+  name             String    @db.VarChar(200)
+  description      String?   @db.Text
+  category         String    @db.VarChar(50) // RESTAURANT, BAR, SHOPPING, PARK, HOTEL, HOSPITAL, EDUCATION, PUBLIC_AGENCY, OTHER
+  address          String    @db.VarChar(300)
+  city             String    @db.VarChar(100)
+  state            String    @db.VarChar(50)
+  postal_code      String?   @db.VarChar(20)
+  latitude         Float
+  longitude        Float
+  overall_score    Decimal   @default(0.00) @db.Decimal(3, 2)
+  total_reviews    Int       @default(0)
+  last_reviewed_at DateTime? @db.Timestamptz
+  created_at       DateTime  @default(now()) @db.Timestamptz
+  updated_at       DateTime  @default(now()) @updatedAt @db.Timestamptz
+
+  reviews       PlaceReview[]
+  media         PlaceMedia[]
+  events        Event[]
+  favorites     UserFavorite[]
+  visit_history PlaceVisitHistory[]
+
+  @@index([category])
+  @@index([city, state])
+  @@map("places")
+}
+
+model AccessibilityCriterion {
+  id          String   @id @default(uuid()) @db.Uuid
+  code        String   @unique @db.VarChar(50)
+  title       String   @db.VarChar(100)
+  description String   @db.Text
+  icon_name   String   @db.VarChar(50)
+  weight      Decimal  @default(1.00) @db.Decimal(3, 2)
+  is_active   Boolean  @default(true)
+
+  review_ratings PlaceReviewRating[]
+
+  @@map("accessibility_criteria")
+}
+
+model PlaceReview {
+  id              String   @id @default(uuid()) @db.Uuid
+  place_id        String   @db.Uuid
+  user_id         String   @db.Uuid
+  general_comment String?  @db.Text
+  average_score   Decimal  @db.Decimal(3, 2)
+  report_count    Int      @default(0)
+  status          String   @default("PUBLISHED") @db.VarChar(20) // DRAFT, PUBLISHED, UNDER_REVIEW, QUARANTINED, REMOVED
+  created_at      DateTime @default(now()) @db.Timestamptz
+  updated_at      DateTime @default(now()) @updatedAt @db.Timestamptz
+
+  place   Place               @relation(fields: [place_id], references: [id], onDelete: Cascade)
+  user    User                @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  ratings PlaceReviewRating[]
+  media   PlaceMedia[]
+
+  @@index([place_id, status])
+  @@index([user_id])
+  @@map("place_reviews")
+}
+
+model PlaceReviewRating {
+  id           String  @id @default(uuid()) @db.Uuid
+  review_id    String  @db.Uuid
+  criterion_id String  @db.Uuid
+  score        Int     @db.SmallInt // 1 to 5
+  notes        String? @db.Text
+
+  review    PlaceReview            @relation(fields: [review_id], references: [id], onDelete: Cascade)
+  criterion AccessibilityCriterion @relation(fields: [criterion_id], references: [id], onDelete: Restrict)
+
+  @@unique([review_id, criterion_id])
+  @@map("place_review_ratings")
+}
+
+model PlaceMedia {
+  id            String   @id @default(uuid()) @db.Uuid
+  place_id      String   @db.Uuid
+  review_id     String?  @db.Uuid
+  user_id       String   @db.Uuid
+  media_url     String   @db.VarChar(512)
+  thumbnail_url String   @db.VarChar(512)
+  alt_text      String   @db.VarChar(300)
+  mime_type     String   @db.VarChar(50)
+  size_bytes    Int
+  report_count  Int      @default(0)
+  status        String   @default("ACTIVE") @db.VarChar(20) // ACTIVE, UNDER_REVIEW, QUARANTINED, REMOVED
+  created_at    DateTime @default(now()) @db.Timestamptz
+
+  place  Place        @relation(fields: [place_id], references: [id], onDelete: Cascade)
+  review PlaceReview? @relation(fields: [review_id], references: [id], onDelete: SetNull)
+  user   User         @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([place_id, status])
+  @@map("place_media")
+}
+
+model SocialConnection {
+  id           String   @id @default(uuid()) @db.Uuid
+  requester_id String   @db.Uuid
+  addressee_id String   @db.Uuid
+  status       String   @default("PENDING") @db.VarChar(20) // PENDING, ACCEPTED, DECLINED, BLOCKED
+  created_at   DateTime @default(now()) @db.Timestamptz
+  updated_at   DateTime @default(now()) @updatedAt @db.Timestamptz
+
+  requester User @relation("SentConnections", fields: [requester_id], references: [id], onDelete: Cascade)
+  addressee User @relation("ReceivedConnections", fields: [addressee_id], references: [id], onDelete: Cascade)
+
+  @@unique([requester_id, addressee_id])
+  @@index([requester_id, status])
+  @@index([addressee_id, status])
+  @@map("social_connections")
+}
+
+model DirectMessage {
+  id           String    @id @default(uuid()) @db.Uuid
+  sender_id    String    @db.Uuid
+  recipient_id String    @db.Uuid
+  content      String    @db.Text
+  status       String    @default("SENT") @db.VarChar(20) // SENT, DELIVERED, READ
+  read_at      DateTime? @db.Timestamptz
+  created_at   DateTime  @default(now()) @db.Timestamptz
+
+  sender    User @relation("SentMessages", fields: [sender_id], references: [id], onDelete: Cascade)
+  recipient User @relation("ReceivedMessages", fields: [recipient_id], references: [id], onDelete: Cascade)
+
+  @@index([sender_id, recipient_id, created_at])
+  @@map("direct_messages")
+}
+
+model Event {
+  id                      String    @id @default(uuid()) @db.Uuid
+  creator_id              String    @db.Uuid
+  place_id                String?   @db.Uuid
+  title                   String    @db.VarChar(150)
+  description             String    @db.Text
+  start_time              DateTime  @db.Timestamptz
+  end_time                DateTime  @db.Timestamptz
+  location_name           String    @db.VarChar(200)
+  address                 String    @db.VarChar(300)
+  latitude                Float?
+  longitude               Float?
+  accessibility_checklist Json
+  max_attendees           Int?
+  status                  String    @default("SCHEDULED") @db.VarChar(20) // SCHEDULED, CANCELLED, COMPLETED
+  created_at              DateTime  @default(now()) @db.Timestamptz
+  updated_at              DateTime  @default(now()) @updatedAt @db.Timestamptz
+
+  creator Place?      @relation(fields: [place_id], references: [id], onDelete: SetNull)
+  user    User        @relation("CreatedEvents", fields: [creator_id], references: [id], onDelete: Cascade)
+  rsvps   EventRSVP[]
+
+  @@index([start_time, status])
+  @@map("events")
+}
+
+model EventRSVP {
+  id         String   @id @default(uuid()) @db.Uuid
+  event_id   String   @db.Uuid
+  user_id    String   @db.Uuid
+  status     String   @default("CONFIRMED") @db.VarChar(20) // CONFIRMED, DECLINED, WAITLIST
+  created_at DateTime @default(now()) @db.Timestamptz
+
+  event Event @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([event_id, user_id])
+  @@map("event_rsvps")
+}
+
+model ContentReport {
+  id               String    @id @default(uuid()) @db.Uuid
+  reporter_id      String    @db.Uuid
+  target_type      String    @db.VarChar(30) // REVIEW, MESSAGE, USER, EVENT, MEDIA
+  target_id        String    @db.Uuid
+  reason           String    @db.VarChar(50) // INACCURATE_DATA, INAPPROPRIATE_MEDIA, HARASSMENT, SPAM, OTHER
+  details          String?   @db.Text
+  status           String    @default("PENDING") @db.VarChar(20) // PENDING, IN_REVIEW, RESOLVED, DISMISSED
+  resolved_by      String?   @db.Uuid
+  resolution_notes String?   @db.Text
+  created_at       DateTime  @default(now()) @db.Timestamptz
+  resolved_at      DateTime? @db.Timestamptz
+
+  reporter User  @relation("FiledReports", fields: [reporter_id], references: [id], onDelete: Cascade)
+  resolver User? @relation("ResolvedReports", fields: [resolved_by], references: [id], onDelete: SetNull)
+
+  @@index([target_type, target_id, status])
+  @@map("content_reports")
+}
+
+model UserFavorite {
+  id         String   @id @default(uuid()) @db.Uuid
+  user_id    String   @db.Uuid
+  place_id   String   @db.Uuid
+  created_at DateTime @default(now()) @db.Timestamptz
+
+  user  User  @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  place Place @relation(fields: [place_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, place_id])
+  @@map("user_favorites")
+}
+
+model PlaceVisitHistory {
+  id         String   @id @default(uuid()) @db.Uuid
+  user_id    String   @db.Uuid
+  place_id   String   @db.Uuid
+  visited_at DateTime @default(now()) @db.Timestamptz
+
+  user  User  @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  place Place @relation(fields: [place_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id, visited_at])
+  @@map("place_visit_history")
+}

@@ -14,7 +14,7 @@ class EventsRepositoryImpl implements EventsRepository {
       queryParams['accessibilityFeature'] = accessibilityFeature;
     }
 
-    final response = await dio.get('/events', queryParameters: queryParams);
+    final response = await dio.get('/api/v1/events', queryParameters: queryParams);
     final data = response.data as List<dynamic>;
 
     return data.map((json) => _mapToEventItem(json as Map<String, dynamic>)).toList();
@@ -34,7 +34,7 @@ class EventsRepositoryImpl implements EventsRepository {
     required Map<String, bool> accessibilityChecklist,
     int? maxAttendees,
   }) async {
-    final response = await dio.post('/events', data: {
+    final response = await dio.post('/api/v1/events', data: {
       if (placeId != null) 'placeId': placeId,
       'title': title,
       'description': description,
@@ -53,7 +53,7 @@ class EventsRepositoryImpl implements EventsRepository {
 
   @override
   Future<void> registerRSVP(String eventId, {String status = 'CONFIRMED'}) async {
-    await dio.post('/events/$eventId/rsvp', data: {
+    await dio.post('/api/v1/events/$eventId/rsvp', data: {
       'status': status,
     });
   }

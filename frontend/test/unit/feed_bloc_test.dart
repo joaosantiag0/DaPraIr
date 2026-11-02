@@ -18,7 +18,7 @@ void main() {
   late MockReportsRepository mockReportsRepo;
   late FeedBloc feedBloc;
 
-  final sampleFeed = const FeedData(
+  const sampleFeed = FeedData(
     highlightedPlaces: [],
     recentReviews: [],
     upcomingEvents: [],

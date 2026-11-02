@@ -271,7 +271,7 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Icon(Icons.warning_amber_rounded, size: 16, color: AppColors.warningOrange),
-                                    const SizedBox(width: 6),
+                                    SizedBox(width: 6),
                                     Text(
                                       'Avaliação há mais de 12 meses',
                                       style: TextStyle(

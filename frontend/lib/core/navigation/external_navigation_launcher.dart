@@ -4,9 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 enum NavigationApp { googleMaps, waze, appleMaps }
 
 class ExternalNavigationLauncher {
-  /**
-   * Launch external routing application for turn-by-turn navigation (FR-004)
-   */
+  /// Launch external routing application for turn-by-turn navigation (FR-004)
   static Future<bool> launchNavigation({
     required double latitude,
     required double longitude,
@@ -44,9 +42,7 @@ class ExternalNavigationLauncher {
     }
   }
 
-  /**
-   * Shows an accessible modal sheet for the user to choose navigation app
-   */
+  /// Shows an accessible modal sheet for the user to choose navigation app
   static Future<void> showNavigationPicker({
     required BuildContext context,
     required double latitude,

@@ -4,7 +4,7 @@ import 'auth_interceptor.dart';
 class DioClient {
   late final Dio dio;
 
-  DioClient({String baseUrl = 'http://localhost:3000'}) {
+  DioClient({String baseUrl = 'http://localhost:3333'}) {
     dio = Dio(
       BaseOptions(
         baseUrl: baseUrl,

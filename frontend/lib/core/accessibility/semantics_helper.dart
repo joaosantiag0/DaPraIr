@@ -1,9 +1,9 @@
-import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
 class SemanticsHelper {
   /// Announces an assertive or polite message to screen readers (TalkBack / VoiceOver)
   static void announce(String message, {TextDirection textDirection = TextDirection.ltr}) {
+    // ignore: deprecated_member_use
     SemanticsService.announce(message, textDirection);
   }
 

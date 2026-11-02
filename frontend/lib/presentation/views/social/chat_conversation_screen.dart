@@ -84,7 +84,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
             child: const Row(
               children: [
                 Icon(Icons.shield_outlined, size: 20, color: AppColors.primaryBlue),
-                const SizedBox(width: 8),
+                SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     'Conversa segura e direta entre amigos verificados no DáPraIr?.',

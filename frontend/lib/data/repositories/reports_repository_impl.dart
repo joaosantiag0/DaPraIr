@@ -14,7 +14,7 @@ class ReportsRepositoryImpl implements ReportsRepository {
     required ReportReason reason,
     String? details,
   }) async {
-    final response = await dio.post('/reports', data: {
+    final response = await dio.post('/api/v1/reports', data: {
       'targetType': targetType,
       'targetId': targetId,
       'reason': reason.toApiCode(),

@@ -15,7 +15,7 @@ class FeedRepositoryImpl implements FeedRepository {
     if (latitude != null) queryParams['latitude'] = latitude;
     if (longitude != null) queryParams['longitude'] = longitude;
 
-    final response = await dio.get('/feed', queryParameters: queryParams);
+    final response = await dio.get('/api/v1/feed', queryParameters: queryParams);
     final data = response.data as Map<String, dynamic>;
 
     final placesList = (data['highlightedPlaces'] as List<dynamic>? ?? []).map((json) {

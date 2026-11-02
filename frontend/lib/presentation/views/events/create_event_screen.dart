@@ -19,8 +19,8 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
   final _addressController = TextEditingController();
   final _maxAttendeesController = TextEditingController();
 
-  DateTime _startTime = DateTime.now().add(const Duration(days: 1));
-  DateTime _endTime = DateTime.now().add(const Duration(days: 1, hours: 2));
+  final DateTime _startTime = DateTime.now().add(const Duration(days: 1));
+  final DateTime _endTime = DateTime.now().add(const Duration(days: 1, hours: 2));
 
   final Map<String, bool> _accessibilityChecklist = {
     'rampa_acesso': false,

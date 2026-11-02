@@ -27,7 +27,7 @@ Follow-up TODOs:
 - Nenhum placeholder deixado pendente.
 -->
 
-# Dá Pra Ir Constitution
+# DáPraIr? Constitution
 
 ## Core Principles
 
@@ -37,7 +37,7 @@ Follow-up TODOs:
 - **Contraste e Legibilidade**: Taxa de contraste mínima de 4.5:1 para texto normal e 3:1 para texto ampliado e elementos gráficos essenciais. O aplicativo DEVE suportar tema de Alto Contraste nativo.
 - **Tipografia e Layout Responsivo**: Suporte obrigatório a fontes escaláveis definidas pelo sistema operacional sem truncamento, sobreposição de textos ou perda de usabilidade.
 - **Área de Toque e Navegação Alternativa**: Elementos clicáveis DEVEM respeitar o alvo mínimo de toque de 48x48 dp. O sistema DEVE permitir navegação completa via teclado físico, switches e comandos assistivos.
-- *Racional*: O objetivo primordial do produto "Dá Pra Ir" é promover inclusão e autonomia de pessoas com deficiência. Interfaces inacessíveis configuram quebra crítica de requisito e impedimento de entrega.
+- *Racional*: O objetivo primordial do produto "DáPraIr?" é promover inclusão e autonomia de pessoas com deficiência. Interfaces inacessíveis configuram quebra crítica de requisito e impedimento de entrega.
 
 ### II. Código Limpo e Componentização Estrita (Clean Code & Modular Design System)
 - **Clean Architecture**: Separação clara e mandatória entre camadas de Apresentação (UI/Widgets), Domínio (Entidades e Casos de Uso/Regras de Negócio) e Dados (Repositórios, Provedores e Clientes de API). Regras de negócio NÃO DEVEM depender de frameworks ou bibliotecas externas.

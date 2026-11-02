@@ -1,9 +1,18 @@
-# Feature Specification: AcessoJá - Plataforma Social e Avaliações de Acessibilidade Física
+# Feature Specification: DáPraIr? - Plataforma Social e Avaliações de Acessibilidade Física
 
 **Feature Branch**: `001-acessibilidade-social-reviews`  
 **Created**: 2026-11-02  
 **Status**: Draft  
-**Input**: User description: "AcessoJá - Rede Social + Avaliações de Acessibilidade para Pessoas com Deficiência Física (MVP)"
+**Input**: User description: "DáPraIr? - Rede Social + Avaliações de Acessibilidade para Pessoas com Deficiência Física (MVP)"
+
+## Clarifications
+
+### Session 2026-11-02
+- Q: Como novos locais (Places) são cadastrados ou integrados na plataforma no MVP? → A: Modelo Híbrido integrando a API do Google Places para busca e catálogo próprio, exigindo a geolocalização do dispositivo (GPS) ou permitindo digitação manual do endereço pelo usuário para buscar e cadastrar novos estabelecimentos comunitariamente.
+- Q: Qual é a política de visibilidade e moderação para avaliações e fotos denunciadas? → A: Ocultação temporária por limiar: o conteúdo denunciado permanece visível exibindo badge de "Sob análise" ao receber 1 ou 2 denúncias, e é ocultado temporariamente de forma automática ao atingir 3 denúncias distintas até a decisão final da equipe de moderação.
+- Q: É permitido o acesso de visitantes não autenticados (Modo Convidado) no MVP? → A: Sim (Modo Convidado aberto): busca no mapa, consulta a notas e leitura de avaliações/fotos são públicas e liberadas sem login. Autenticação obrigatória apenas para ações ativas (publicar avaliações, favoritar, participar do chat, solicitar amizades ou criar eventos).
+- Q: Quais recursos estão formalmente fora do escopo do MVP (Out of Scope)? → A: (1) Navegação GPS curva-a-curva própria (delegada para apps instalados como Google Maps/Waze via deeplink); (2) Reservas, pedidos ou transações financeiras; (3) Chamadas de áudio e vídeo no chat (estritamente texto); (4) Moderação automatizada por modelos complexos de visão computacional/IA (moderação inicial humana).
+- Q: Quem tem permissão para iniciar conversas no chat direto 1:1? → A: Apenas conexões mútuas aceitas (amigos confirmados). Usuários sem vínculo prévio aprovado não podem enviar mensagens diretas, prevenindo assédio e spam.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -20,6 +29,7 @@ Como uma pessoa com deficiência física (usuária de cadeira de rodas ou mobili
 1. **Given** um usuário logado na tela de detalhes de um restaurante, **When** ele seleciona a opção "Avaliar Acessibilidade", preenche notas para Entrada (rampa/nível), Banheiro Adaptado, Espaço de Manobra, Mesas Adaptadas, Estacionamento e Atendimento, anexa ao menos uma foto comprobatória e confirma o envio, **Then** a avaliação é publicada imediatamente, atualizando a média geral do local, as médias de cada critério e a data de última verificação.
 2. **Given** um usuário buscando um local para almoçar, **When** ele aplica os filtros "Banheiro Adaptado" e "Entrada Nivelada/Rampa", **Then** a listagem e o mapa exibem exclusivamente estabelecimentos que atendem a esses critérios confirmados por avaliações recentes.
 3. **Given** um local com última avaliação realizada há mais de 12 meses, **When** o usuário abre a página do local, **Then** o sistema exibe um alerta de "Necessita de verificação recente" convidando frequentadores a atualizarem as informações.
+4. **Given** um visitante não autenticado navegando no aplicativo, **When** ele realiza buscas ou navega pelo mapa, **Then** consegue visualizar normalmente os estabelecimentos, detalhes e fotos de acessibilidade, sendo solicitado a autenticar-se apenas caso acione ações ativas como "Avaliar Acessibilidade" ou "Favoritar".
 
 ---
 
@@ -92,8 +102,9 @@ Como membro da comunidade, quero visualizar um feed com atualizações de lugare
 - **Local sem avaliações cadastradas**: Ao buscar um local não avaliado, a interface deve indicar de forma acolhedora que o espaço ainda não possui registros de acessibilidade e convidar o usuário a ser o primeiro a avaliá-lo.
 - **Avaliações com notas contraditórias**: Se critérios objetivos forem preenchidos com notas divergentes (ex: nota alta para entrada, mas foto indicando degrau sem rampa), o sistema deve solicitar confirmação do usuário antes da publicação.
 - **Perfis totalmente privados no matching**: Usuários com perfil 100% privado não devem ter seus dados expostos em listagens públicas ou sugestões abertas de conexões sem consentimento prévio para descoberta.
-- **Tentativa de assédio ou spam no chat**: Limite de taxa de mensagens e botão acessível e evidente de bloqueio/denúncia em todas as telas de conversa direta.
+- **Tentativa de assédio ou spam no chat**: O canal de conversa direta é estritamente restrito a usuários com conexão mútua confirmada (amigos aceitos); mensagens de desconhecidos são sumariamente bloqueadas na API. O chat dispõe de limite de taxa de envio (rate-limiting) e botões evidentes e acessíveis de bloqueio e denúncia imediata em todas as telas de conversa.
 - **Imagens pesadas ou de baixa resolução**: O sistema deve otimizar imagens no envio sem perda dos detalhes relevantes para identificação de acessibilidade (ex: altura de degraus, barras de apoio).
+- **Conteúdo contestado ou denunciado**: Avaliações ou fotos com 1 ou 2 denúncias ativas continuam acessíveis exibindo selo preventivo de "Sob análise"; ao atingir 3 denúncias de contas distintas, são automaticamente ocultadas da visualização pública e encaminhadas com prioridade para a fila de moderação.
 
 ---
 
@@ -105,22 +116,24 @@ Como membro da comunidade, quero visualizar um feed com atualizações de lugare
 - **FR-002**: O sistema DEVE disponibilizar questionário de onboarding opcional para captura de tipo de deficiência física (cadeira de rodas motorizada/manual, mobilidade reduzida, limitação de membros, etc.) e preferências de acessibilidade.
 - **FR-003**: O sistema DEVE permitir ao usuário definir a visibilidade de cada atributo do seu perfil entre três níveis: Público, Apenas Amigos/Conexões ou Privado (apenas o próprio usuário).
 - **FR-004**: O sistema DEVE exibir badges de verificação de perfil e reputação (ex: "Usuário Verificado", "Avaliador Frequente", "Colaborador da Comunidade").
-- **FR-005**: O sistema DEVE possibilitar busca de locais por nome, categoria (restaurante, shopping, parque, hotel, banco, academia, etc.) e localização geográfica atual ou endereço informado.
+- **FR-005**: O sistema DEVE possibilitar busca de locais por nome, categoria e proximidade através de integração híbrida com Google Places e catálogo local, obtendo a posição via geolocalização por GPS do dispositivo ou via digitação manual do endereço pelo usuário.
 - **FR-006**: O sistema DEVE disponibilizar mapa interativo com marcadores visuais diferenciados por nível de acessibilidade geral do local.
 - **FR-007**: O sistema DEVE permitir filtrar locais na busca e no mapa por critérios específicos: Entrada com rampa/nível, Elevador, Banheiro adaptado, Espaço de manobra para cadeira de rodas, Mesas/assentos adaptados, Estacionamento acessível e Atendimento inclusivo.
 - **FR-008**: O sistema DEVE permitir a criação de avaliações de estabelecimentos contendo notas quantitativas individuais (escala de 1 a 5) para cada critério específico de acessibilidade física.
 - **FR-009**: O sistema DEVE permitir o envio de fotos comprobatórias com descrição textual associada em cada avaliação realizada.
 - **FR-010**: O sistema DEVE calcular e exibir a nota geral de acessibilidade do local, o detalhamento das notas médias por critério e a data da última avaliação submetida ("última verificação").
-- **FR-011**: O sistema DEVE fornecer mecanismo de denúncia de avaliações suspeitas, incorretas ou ofensivas, com categorização do motivo da denúncia.
+- **FR-011**: O sistema DEVE fornecer mecanismo de denúncia de avaliações suspeitas, incorretas ou ofensivas com categorização do motivo; o conteúdo denunciado deve exibir selo de "Sob análise" ao receber 1 a 2 denúncias e ser ocultado temporariamente de forma automática ao atingir 3 denúncias de usuários distintos até a deliberação final da equipe de moderação.
 - **FR-012**: O sistema DEVE manter o histórico de locais visitados, salvos como favoritos e avaliados pelo próprio usuário.
 - **FR-013**: O sistema DEVE sugerir conexões entre usuários com base em proximidade geográfica, interesses comuns e compatibilidade de preferências de acessibilidade compartilhadas publicamente.
 - **FR-014**: O sistema DEVE possibilitar o envio de solicitações de amizade e a opção de seguir perfis de outros membros da comunidade.
-- **FR-015**: O sistema DEVE prover chat privado direto (1:1) com mensagens de texto entre usuários conectados.
+- **FR-015**: O sistema DEVE prover chat privado direto (1:1) com mensagens de texto exclusivamente entre usuários com conexão mútua confirmada (amigos aceitos), bloqueando tentativas de envio de mensagens por usuários não conectados para prevenção de assédio e spam.
 - **FR-016**: O sistema DEVE disponibilizar funcionalidades de bloqueio de contato e denúncia de usuários no canal de chat.
 - **FR-017**: O sistema DEVE permitir a qualquer usuário criar e divulgar eventos inclusivos com título, data, horário, endereço, descrição e declaração obrigatória dos itens de acessibilidade do local.
 - **FR-018**: O sistema DEVE possibilitar a confirmação de presença (RSVP) em eventos e a visualização da lista de participantes confirmados.
 - **FR-019**: O sistema DEVE apresentar feed principal contendo: sugestões de locais acessíveis próximos, avaliações recentes da comunidade, sugestões de conexão e eventos programados.
 - **FR-020**: O sistema DEVE suportar modo offline para consulta a locais previamente visitados ou salvos em favoritos, bem como criação de rascunhos de avaliação.
+- **FR-021**: O sistema DEVE permitir que qualquer usuário autenticado cadastre comunitariamente um novo local caso não seja retornado na busca do Google Places/catálogo, informando nome, categoria, endereço digitado e localização confirmada no mapa.
+- **FR-022**: O sistema DEVE permitir navegação, busca no mapa e leitura completa de locais, notas e avaliações com fotos em modo visitante (sem autenticação), exigindo login exclusivamente para ações ativas (publicar avaliações, favoritar, enviar mensagens, conexões sociais e criar eventos).
 
 ### Accessibility Requirements (WCAG 2.1 AA) *(mandatory per Constitution)*
 
@@ -141,7 +154,7 @@ Como membro da comunidade, quero visualizar um feed com atualizações de lugare
 ### Key Entities *(include if feature involves data)*
 
 - **Usuário (User Profile)**: Identificação cadastral, nome/apelido, foto, biografia, nível de verificação/badges, tipo de deficiência física (sensível/opcional), preferências de acessibilidade (sensível/opcional), configurações de privacidade por campo e termos de consentimento.
-- **Local (Place)**: Identificador único, nome, endereço/geolocalização, categoria (restaurante, hotel, etc.), média geral de acessibilidade, médias individuais por critério, data da última avaliação e lista de mídias anexadas.
+- **Local (Place)**: Identificador único, ID externo opcional (Google Places ID), nome, endereço e geolocalização (via GPS ou digitação manual), categoria (restaurante, hotel, etc.), média geral de acessibilidade, médias individuais por critério, data da última avaliação e lista de mídias anexadas.
 - **Avaliação de Acessibilidade (Place Review)**: Vínculo entre Usuário e Local, notas quantitativas por critério (entrada, elevador, banheiro, manobra, assentos, estacionamento, atendimento), comentário descritivo, fotos/vídeos anexados, data de criação e histórico de denúncias.
 - **Critério de Acessibilidade (Accessibility Item)**: Definição padronizada de cada item avaliado (tipo de entrada, elevador, banheiro adaptado, manobra de cadeira, assentos acessíveis, estacionamento regulamentado, atendimento inclusivo).
 - **Conexão Social (Social Connection / Friendship)**: Relação entre dois usuários, indicando estado (pendente, aceito, bloqueado) e data de início do vínculo.
@@ -162,6 +175,15 @@ Como membro da comunidade, quero visualizar um feed com atualizações de lugare
 - **SC-005**: Taxa de retenção de usuários no 30º dia (D30) atinge pelo menos 25% nos primeiros 6 meses após o lançamento.
 - **SC-006**: A plataforma alcança um índice de recomendação líquida (NPS) igual ou superior a 45 entre os usuários ativos com deficiência física.
 - **SC-007**: Pelo menos 85% dos locais avaliados contam com ao menos uma foto comprobatória de suas condições de acessibilidade física.
+
+---
+
+## Out of Scope *(MVP)*
+
+- **Navegação GPS curva-a-curva em tempo real**: O aplicativo não fornecerá motor de navegação/roteamento veicular ou de pedestre passo-a-passo próprio; a navegação deve delegar a rota aos aplicativos de mapas nativos instalados no dispositivo do usuário (ex: Google Maps, Apple Maps, Waze) através de deeplink com as coordenadas do local.
+- **Reservas e transações financeiras**: Não haverá agendamento de mesas, compra de ingressos para eventos ou pagamentos de qualquer natureza dentro do aplicativo.
+- **Chamadas de voz e vídeo**: O canal de comunicação privada entre conexões no MVP restringe-se a mensagens de texto assíncronas e em tempo real.
+- **Moderação automatizada por visão computacional / IA**: A análise de fotos e textos denunciados será realizada por moderadores humanos através de fila administrativa de denúncias.
 
 ---
 

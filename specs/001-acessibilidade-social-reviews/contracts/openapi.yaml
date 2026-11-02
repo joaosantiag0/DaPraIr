@@ -1,0 +1,988 @@
+openapi: 3.1.0
+info:
+  title: DáPraIr? API
+  version: 1.1.0
+  description: >
+    API REST para a plataforma social e avaliações de acessibilidade física DáPraIr?.
+    Inclui autenticação, Modo Convidado (leitura pública), busca híbrida no catálogo e Google Places,
+    avaliações multicritério com limiar de quarentena automática, fotos com audiodescrição,
+    conexões sociais e chat 1:1 restrito a amigos aceitos.
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Servidor de Desenvolvimento Local
+  - url: https://api.daprair.com.br/v1
+    description: Servidor de Produção
+
+security:
+  - bearerAuth: []
+
+paths:
+  # ---------------------------------------------------------------------------
+  # AUTENTICAÇÃO E CONTA
+  # ---------------------------------------------------------------------------
+  /auth/register:
+    post:
+      summary: Registro de novo usuário
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, handle, password, acceptTermsVersion]
+              properties:
+                name:
+                  type: string
+                  example: Maria Silva
+                email:
+                  type: string
+                  format: email
+                  example: maria@exemplo.com
+                handle:
+                  type: string
+                  example: maria_silva
+                password:
+                  type: string
+                  minLength: 8
+                  example: P@ssword1234
+                acceptTermsVersion:
+                  type: string
+                  example: "1.0.0"
+      responses:
+        '201':
+          description: Usuário cadastrado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /auth/login:
+    post:
+      summary: Login por e-mail e senha
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Login efetuado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ---------------------------------------------------------------------------
+  # PERFIL DE ACESSIBILIDADE E PRIVACIDADE LGPD
+  # ---------------------------------------------------------------------------
+  /users/me/accessibility-profile:
+    get:
+      summary: Obter perfil de acessibilidade e preferências do usuário autenticado
+      tags: [Privacy & LGPD]
+      responses:
+        '200':
+          description: Perfil retornado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessibilityProfile'
+    put:
+      summary: Atualizar preferências de acessibilidade e nível de visibilidade (LGPD)
+      tags: [Privacy & LGPD]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [visibility, consentGranted]
+              properties:
+                disabilityTypes:
+                  type: array
+                  items:
+                    type: string
+                  example: ["WHEELCHAIR_MANUAL", "REDUCED_MOBILITY"]
+                assistanceNeeds:
+                  type: array
+                  items:
+                    type: string
+                  example: ["RAMP_REQUIRED", "ADAPTED_RESTROOM"]
+                visibility:
+                  type: string
+                  enum: [PUBLIC, FRIENDS_ONLY, PRIVATE]
+                  default: PRIVATE
+                consentGranted:
+                  type: boolean
+                  description: Consentimento expresso e inequívoco para dados sensíveis (LGPD Art. 5, II)
+      responses:
+        '200':
+          description: Perfil atualizado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessibilityProfile'
+
+  /users/me/export-data:
+    get:
+      summary: Portabilidade e Exportação Integral de Dados Pessoais (LGPD Art. 18, V)
+      tags: [Privacy & LGPD]
+      responses:
+        '200':
+          description: Pacote JSON com todos os dados pessoais, consentimentos e histórico do usuário
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  userData:
+                    $ref: '#/components/schemas/UserProfile'
+                  accessibilityProfile:
+                    $ref: '#/components/schemas/AccessibilityProfile'
+                  consentLog:
+                    type: array
+                    items:
+                      type: object
+                  reviews:
+                    type: array
+                    items:
+                      type: object
+                  favorites:
+                    type: array
+                    items:
+                      type: object
+
+  /users/me/anonymize:
+    post:
+      summary: Direito ao Esquecimento / Anonimização de Conta (LGPD Art. 18, VI)
+      tags: [Privacy & LGPD]
+      description: Remove todos os dados identificáveis, revoga consentimentos e converte avaliações públicas para autor anônimo.
+      responses:
+        '200':
+          description: Conta anonimizada com sucesso
+
+  # ---------------------------------------------------------------------------
+  # LOCAIS E BUSCA ESPACIAL (MODO CONVIDADO PÚBLICO + GOOGLE PLACES HÍBRIDO)
+  # ---------------------------------------------------------------------------
+  /places:
+    get:
+      summary: Buscar locais por geolocalização (GPS) ou endereço digitado com filtros de acessibilidade
+      tags: [Places]
+      security: [] # Acesso livre em Modo Convidado (Clarification 3)
+      parameters:
+        - name: latitude
+          in: query
+          required: true
+          schema:
+            type: number
+            format: float
+            example: -23.55052
+        - name: longitude
+          in: query
+          required: true
+          schema:
+            type: number
+            format: float
+            example: -46.633308
+        - name: radiusMeters
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 5000
+            example: 3000
+        - name: query
+          in: query
+          required: false
+          schema:
+            type: string
+            description: Texto de busca por nome ou endereço digitado
+        - name: category
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [RESTAURANT, BAR, SHOPPING, PARK, HOTEL, HOSPITAL, EDUCATION, PUBLIC_AGENCY, OTHER]
+        - name: requiredCriteria
+          in: query
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+            example: ["ENTRANCE_RAMP_LEVEL", "ADAPTED_BATHROOM"]
+          description: Filtra apenas locais com nota média >= 4.0 nos critérios especificados
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Lista de locais retornada com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PlaceSummary'
+
+    post:
+      summary: Cadastrar novo local comunitariamente (FR-021)
+      tags: [Places]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, category, address, city, state, latitude, longitude]
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                category:
+                  type: string
+                  enum: [RESTAURANT, BAR, SHOPPING, PARK, HOTEL, HOSPITAL, EDUCATION, PUBLIC_AGENCY, OTHER]
+                address:
+                  type: string
+                city:
+                  type: string
+                state:
+                  type: string
+                postalCode:
+                  type: string
+                latitude:
+                  type: number
+                  format: float
+                longitude:
+                  type: number
+                  format: float
+                googlePlaceId:
+                  type: string
+                  description: Google Places ID se selecionado a partir de busca externa
+      responses:
+        '201':
+          description: Local cadastrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlaceDetail'
+
+  /places/external-search:
+    get:
+      summary: Pesquisar novos estabelecimentos via Google Places API (Clarification 1)
+      tags: [Places]
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+            example: "Restaurante Italiano Paulista"
+        - name: latitude
+          in: query
+          required: false
+          schema:
+            type: number
+            format: float
+        - name: longitude
+          in: query
+          required: false
+          schema:
+            type: number
+            format: float
+      responses:
+        '200':
+          description: Resultados brutos do Google Places prontos para importação/avaliação
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    googlePlaceId:
+                      type: string
+                    name:
+                      type: string
+                    formattedAddress:
+                      type: string
+                    latitude:
+                      type: number
+                    longitude:
+                      type: number
+                    category:
+                      type: string
+                    alreadyImportedId:
+                      type: string
+                      format: uuid
+                      nullable: true
+
+  /places/{placeId}:
+    get:
+      summary: Obter detalhes completos de um local e resumo das notas de acessibilidade
+      tags: [Places]
+      security: [] # Modo Convidado liberado (Clarification 3)
+      parameters:
+        - name: placeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Detalhes do local
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlaceDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ---------------------------------------------------------------------------
+  # AVALIAÇÕES DE ACESSIBILIDADE & MODERAÇÃO POR LIMIAR (Clarification 2)
+  # ---------------------------------------------------------------------------
+  /places/{placeId}/reviews:
+    get:
+      summary: Listar avaliações de acessibilidade de um local (Modo Convidado)
+      tags: [Reviews]
+      security: [] # Modo Convidado liberado
+      parameters:
+        - name: placeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Lista de avaliações não-quarentenadas
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ReviewDetail'
+
+    post:
+      summary: Publicar avaliação detalhada de acessibilidade física
+      tags: [Reviews]
+      parameters:
+        - name: placeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ratings]
+              properties:
+                generalComment:
+                  type: string
+                ratings:
+                  type: array
+                  items:
+                    type: object
+                    required: [criterionCode, score]
+                    properties:
+                      criterionCode:
+                        type: string
+                        example: "ENTRANCE_RAMP_LEVEL"
+                      score:
+                        type: integer
+                        minimum: 1
+                        maximum: 5
+                      notes:
+                        type: string
+                mediaIds:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+      responses:
+        '201':
+          description: Avaliação publicada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewDetail'
+
+  # ---------------------------------------------------------------------------
+  # MÍDIA E FOTOS COMPROBATÓRIAS (COM AUDIODESCRIÇÃO / ALT-TEXT MANDATÓRIA)
+  # ---------------------------------------------------------------------------
+  /media/upload-url:
+    post:
+      summary: Obter URL pré-assinada para upload direto de foto
+      tags: [Media]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [mimeType, sizeBytes, altText, placeId]
+              properties:
+                mimeType:
+                  type: string
+                  enum: [image/jpeg, image/png, image/webp]
+                sizeBytes:
+                  type: integer
+                  maximum: 15728640 # 15MB
+                altText:
+                  type: string
+                  description: Descrição em texto obrigatória da imagem para tecnologia assistiva (AR-001)
+                  example: "Rampa larga de acesso na entrada principal com corrimão duplo em metal."
+                placeId:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: URL pré-assinada gerada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  mediaId:
+                    type: string
+                    format: uuid
+                  uploadUrl:
+                    type: string
+                  targetUrl:
+                    type: string
+
+  # ---------------------------------------------------------------------------
+  # CONEXÕES SOCIAIS E REDE
+  # ---------------------------------------------------------------------------
+  /social/connections:
+    get:
+      summary: Listar amigos e solicitações de conexão
+      tags: [Social]
+      responses:
+        '200':
+          description: Lista de conexões
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SocialConnectionItem'
+
+    post:
+      summary: Enviar solicitação de amizade
+      tags: [Social]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [targetUserId]
+              properties:
+                targetUserId:
+                  type: string
+                  format: uuid
+      responses:
+        '201':
+          description: Solicitação enviada
+
+  /social/recommendations:
+    get:
+      summary: Sugestões de conexões com afinidade e proximidade
+      tags: [Social]
+      responses:
+        '200':
+          description: Usuários sugeridos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserProfile'
+
+  # ---------------------------------------------------------------------------
+  # CHAT DIRETO (1:1 RESTRICTED TO ACCEPTED FRIENDS - Clarification 5)
+  # ---------------------------------------------------------------------------
+  /chat/messages/{peerUserId}:
+    get:
+      summary: Obter histórico de mensagens diretas com um amigo aceito
+      tags: [Chat]
+      parameters:
+        - name: peerUserId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Histórico de mensagens
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DirectMessageItem'
+        '403':
+          description: Comunicação bloqueada (requer conexão mútua aceita)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "CHAT_MUTUAL_FRIENDSHIP_REQUIRED"
+                  message:
+                    type: string
+                    example: "Mensagens diretas são permitidas apenas entre usuários com conexão de amizade aceita."
+
+    post:
+      summary: Enviar mensagem direta para amigo aceito
+      tags: [Chat]
+      parameters:
+        - name: peerUserId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content:
+                  type: string
+                  maxLength: 2000
+      responses:
+        '201':
+          description: Mensagem enviada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DirectMessageItem'
+        '403':
+          description: Bloqueado por não serem amigos conectados
+
+  # ---------------------------------------------------------------------------
+  # EVENTOS INCLUSIVOS
+  # ---------------------------------------------------------------------------
+  /events:
+    get:
+      summary: Listar eventos inclusivos com filtros de data e acessibilidade (Modo Convidado)
+      tags: [Events]
+      security: []
+      parameters:
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Lista de eventos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EventItem'
+
+    post:
+      summary: Criar evento inclusivo com checklist obrigatório de acessibilidade
+      tags: [Events]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, description, startTime, endTime, locationName, address, accessibilityChecklist]
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                startTime:
+                  type: string
+                  format: date-time
+                endTime:
+                  type: string
+                  format: date-time
+                locationName:
+                  type: string
+                address:
+                  type: string
+                placeId:
+                  type: string
+                  format: uuid
+                accessibilityChecklist:
+                  type: object
+                  description: Checklist mandatório de acessibilidade arquitetônica declarada
+                  properties:
+                    hasRampOrLevelEntrance:
+                      type: boolean
+                    hasAdaptedBathroom:
+                      type: boolean
+                    hasElevator:
+                      type: boolean
+                    hasReservedParking:
+                      type: boolean
+                    otherDetails:
+                      type: string
+      responses:
+        '201':
+          description: Evento criado com sucesso
+
+  # ---------------------------------------------------------------------------
+  # DENÚNCIAS E MODERAÇÃO (Clarification 2)
+  # ---------------------------------------------------------------------------
+  /reports:
+    post:
+      summary: Enviar denúncia de conteúdo impróprio ou incorreto
+      tags: [Reports]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [targetType, targetId, reason]
+              properties:
+                targetType:
+                  type: string
+                  enum: [REVIEW, MESSAGE, USER, EVENT, MEDIA]
+                targetId:
+                  type: string
+                  format: uuid
+                reason:
+                  type: string
+                  enum: [INACCURATE_DATA, INAPPROPRIATE_MEDIA, HARASSMENT, SPAM, OTHER]
+                details:
+                  type: string
+      responses:
+        '201':
+          description: Denúncia registrada. Dispara contagem de quarentena automática se atingir limiar de 3 relatos.
+
+# ---------------------------------------------------------------------------
+# COMPONENTES E SCHEMAS
+# ---------------------------------------------------------------------------
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    AuthResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        user:
+          $ref: '#/components/schemas/UserProfile'
+
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        handle:
+          type: string
+        avatarUrl:
+          type: string
+        bio:
+          type: string
+        badges:
+          type: array
+          items:
+            type: string
+
+    AccessibilityProfile:
+      type: object
+      properties:
+        visibility:
+          type: string
+          enum: [PUBLIC, FRIENDS_ONLY, PRIVATE]
+        disabilityTypes:
+          type: array
+          items:
+            type: string
+        assistanceNeeds:
+          type: array
+          items:
+            type: string
+
+    PlaceSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        googlePlaceId:
+          type: string
+          nullable: true
+        source:
+          type: string
+          enum: [COMMUNITY, GOOGLE_PLACES]
+        name:
+          type: string
+        category:
+          type: string
+        address:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+        overallScore:
+          type: number
+        totalReviews:
+          type: integer
+        distanceMeters:
+          type: number
+        needsRecentVerification:
+          type: boolean
+          description: Verdadeiro se última avaliação tiver mais de 12 meses
+
+    PlaceDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        googlePlaceId:
+          type: string
+          nullable: true
+        source:
+          type: string
+          enum: [COMMUNITY, GOOGLE_PLACES]
+        name:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        address:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+        overallScore:
+          type: number
+        totalReviews:
+          type: integer
+        lastReviewedAt:
+          type: string
+          format: date-time
+        criteriaScores:
+          type: object
+          additionalProperties:
+            type: number
+        media:
+          type: array
+          items:
+            $ref: '#/components/schemas/MediaItem'
+
+    ReviewDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        author:
+          $ref: '#/components/schemas/UserProfile'
+        generalComment:
+          type: string
+        averageScore:
+          type: number
+        status:
+          type: string
+          enum: [PUBLISHED, UNDER_REVIEW, QUARANTINED]
+        isUnderReview:
+          type: boolean
+          description: Verdadeiro se possui 1 ou 2 denúncias ativas aguardando moderação
+        criteriaRatings:
+          type: array
+          items:
+            type: object
+            properties:
+              criterionCode:
+                type: string
+              criterionTitle:
+                type: string
+              score:
+                type: integer
+              notes:
+                type: string
+        media:
+          type: array
+          items:
+            $ref: '#/components/schemas/MediaItem'
+        createdAt:
+          type: string
+          format: date-time
+
+    MediaItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        url:
+          type: string
+        thumbnailUrl:
+          type: string
+        altText:
+          type: string
+          description: Audiodescrição obrigatória para tecnologia assistiva
+        status:
+          type: string
+          enum: [ACTIVE, UNDER_REVIEW, QUARANTINED]
+
+    SocialConnectionItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        peerUser:
+          $ref: '#/components/schemas/UserProfile'
+        status:
+          type: string
+          enum: [PENDING, ACCEPTED, DECLINED, BLOCKED]
+        createdAt:
+          type: string
+          format: date-time
+
+    DirectMessageItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        senderId:
+          type: string
+          format: uuid
+        content:
+          type: string
+        status:
+          type: string
+          enum: [SENT, DELIVERED, READ]
+        createdAt:
+          type: string
+          format: date-time
+
+    EventItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        locationName:
+          type: string
+        address:
+          type: string
+        accessibilityChecklist:
+          type: object
+        confirmedAttendeesCount:
+          type: integer
+
+  responses:
+    BadRequest:
+      description: Parâmetros inválidos ou violação de validação de esquema
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              statusCode:
+                type: integer
+                example: 400
+              error:
+                type: string
+                example: Bad Request
+              message:
+                type: string
+    Unauthorized:
+      description: Credenciais inválidas ou token de autenticação expirado
+    NotFound:
+      description: Recurso não encontrado

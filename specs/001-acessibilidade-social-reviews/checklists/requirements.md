@@ -1,4 +1,4 @@
-# Specification Quality Checklist: AcessoJá - Plataforma Social e Avaliações de Acessibilidade Física
+# Specification Quality Checklist: DáPraIr? - Plataforma Social e Avaliações de Acessibilidade Física
 
 **Purpose**: Validate specification completeness and quality before proceeding to planning  
 **Created**: 2026-11-02  
@@ -31,5 +31,5 @@
 
 ## Notes
 
-- A especificação reflete integralmente os requisitos do MVP do AcessoJá apresentados no PRD.
+- A especificação reflete integralmente os requisitos do MVP do DáPraIr? apresentados no PRD.
 - Todos os critérios de qualidade foram validados com êxito. A especificação está pronta para planejamento (`/speckit-plan`).

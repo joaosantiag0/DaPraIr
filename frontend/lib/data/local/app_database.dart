@@ -1,8 +1,5 @@
-import 'dart:io';
 import 'package:drift/drift.dart';
-import 'package:drift/native.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:path/path.dart' as p;
+import 'connection/connection.dart' as impl;
 
 part 'app_database.g.dart';
 
@@ -49,12 +46,8 @@ class CachedEvents extends Table {
   Set<Column> get primaryKey => {id};
 }
 
-LazyDatabase _openConnection() {
-  return LazyDatabase(() async {
-    final dbFolder = await getApplicationDocumentsDirectory();
-    final file = File(p.join(dbFolder.path, 'daprair_offline.sqlite'));
-    return NativeDatabase.createInBackground(file);
-  });
+QueryExecutor _openConnection() {
+  return impl.connect();
 }
 
 @DriftDatabase(tables: [CachedPlaces, ReviewDrafts, CachedEvents])

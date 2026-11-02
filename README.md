@@ -13,15 +13,21 @@ O **DáPraIr?** é um ecossistema multiplataforma (Web & Mobile) e colaborativo 
 
 ---
 
-### 2. Subir o Banco de Dados PostGIS
+### 2. Subir Toda a Infraestrutura com Docker (PostGIS + Backend)
 ```bash
-docker compose up -d
+docker compose up -d --build
 ```
-> O banco de dados PostGIS estará disponível na porta `5433` (mapeada para `5432` no container).
+> Isso iniciará:
+> - **PostgreSQL 16 + PostGIS**: porta `5433` (mapeada para `5432` no container).
+> - **Backend Fastify (TypeScript)**: porta `3333`.
+> - O container do backend aguarda o banco estar saudável, aplica o schema Prisma (`db push`) e realiza o seed inicial dos critérios de acessibilidade de forma 100% automatizada.
+> - **API disponível em**: `http://localhost:3333`
+> - **Documentação OpenAPI/Swagger**: `http://localhost:3333/docs`
 
 ---
 
-### 3. Configurar e Iniciar o Backend
+### 3. Desenvolvimento Local do Backend (Opcional - sem Docker)
+Caso deseje rodar o backend diretamente no host para desenvolvimento:
 ```bash
 cd backend
 npm install
@@ -29,8 +35,6 @@ npx prisma db push
 npx tsx prisma/seed.ts
 npm run dev
 ```
-- API disponível em: `http://localhost:3333`
-- Documentação interativa OpenAPI/Swagger: `http://localhost:3333/docs`
 
 ---
 

@@ -6,6 +6,8 @@ class AccessibleCard extends StatelessWidget {
   final String? semanticLabel;
   final EdgeInsetsGeometry padding;
   final Color? backgroundColor;
+  final BorderRadius? borderRadius;
+  final BorderSide? borderSide;
 
   const AccessibleCard({
     super.key,
@@ -14,15 +16,23 @@ class AccessibleCard extends StatelessWidget {
     this.semanticLabel,
     this.padding = const EdgeInsets.all(16.0),
     this.backgroundColor,
+    this.borderRadius,
+    this.borderSide,
   });
 
   @override
   Widget build(BuildContext context) {
+    final effectiveRadius = borderRadius ?? BorderRadius.circular(16);
+
     final cardWidget = Card(
       color: backgroundColor,
+      shape: RoundedRectangleBorder(
+        borderRadius: effectiveRadius,
+        side: borderSide ?? BorderSide.none,
+      ),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: effectiveRadius,
         child: Padding(
           padding: padding,
           child: child,

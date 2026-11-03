@@ -37,6 +37,40 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
     context.read<ReviewsBloc>().add(LoadReviewsEvent(widget.placeId));
   }
 
+  IconData _getCriterionIcon(String criterionCode) {
+    switch (criterionCode.toUpperCase()) {
+      case 'ENTRANCE_RAMP_LEVEL':
+        return Icons.accessible_forward;
+      case 'ELEVATOR_LIFT':
+        return Icons.elevator;
+      case 'ADAPTED_BATHROOM':
+        return Icons.wc;
+      case 'MANEUVERING_SPACE':
+        return Icons.social_distance;
+      case 'ADAPTED_SEATING':
+        return Icons.table_restaurant;
+      case 'ACCESSIBLE_PARKING':
+        return Icons.local_parking;
+      case 'INCLUSIVE_SERVICE':
+        return Icons.support_agent;
+      default:
+        return Icons.check_circle_outline;
+    }
+  }
+
+  String _getQualityLabel(double score) {
+    if (score >= 4.5) return 'Excelente Acessibilidade';
+    if (score >= 3.5) return 'Boa Acessibilidade';
+    if (score >= 2.5) return 'Acessibilidade Regular';
+    return 'Acessibilidade Limitada';
+  }
+
+  Color _getScoreColor(double score) {
+    if (score >= 4.0) return AppColors.successGreen;
+    if (score >= 2.5) return AppColors.starGold;
+    return AppColors.warningOrange;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -50,79 +84,183 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
               : widget.initialPlace;
 
           if (place == null) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Carregando informações de acessibilidade...'),
+                ],
+              ),
+            );
           }
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Header
-                Text(
-                  place.name,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  place.address,
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-                const SizedBox(height: 12),
-
-                // Overall score and outdated badge
+                // Category pill
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: AppColors.primaryBlue,
-                        borderRadius: BorderRadius.circular(10),
+                        color: AppColors.primaryContainer,
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.star, color: Colors.amber, size: 20),
-                          const SizedBox(width: 6),
-                          Text(
-                            place.overallScore.toStringAsFixed(1),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18,
-                            ),
-                          ),
-                        ],
+                      child: Text(
+                        place.category,
+                        style: const TextStyle(
+                          color: AppColors.primaryBlue,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      '${place.totalReviews} ${place.totalReviews == 1 ? "avaliação" : "avaliações"}',
-                      style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ],
                 ),
+                const SizedBox(height: 8),
 
+                // Place Name & Address
+                Text(
+                  place.name,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: -0.5,
+                      ),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.location_on_outlined, size: 18, color: AppColors.textHint),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        place.address,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: AppColors.textHint,
+                            ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 18),
+
+                // Overall Score Card
+                Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceLight,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.borderLight, width: 1.2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.04),
+                        blurRadius: 10,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      // Big Score Badge
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryBlue,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Column(
+                          children: [
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.star_rounded, color: Colors.amber, size: 24),
+                                const SizedBox(width: 4),
+                                Text(
+                                  place.overallScore.toStringAsFixed(1),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 22,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const Text(
+                              'de 5.0',
+                              style: TextStyle(color: Colors.white70, fontSize: 11),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _getQualityLabel(place.overallScore),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${place.totalReviews} ${place.totalReviews == 1 ? "avaliação da comunidade" : "avaliações da comunidade"}',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: AppColors.textHint,
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Outdated Review Alert Banner (12 months rule)
                 if (place.isOutdated) ...[
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 16),
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: AppColors.warningOrange.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: AppColors.warningOrange, width: 1.5),
+                      color: AppColors.warningLight,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.warningOrange.withOpacity(0.6), width: 1.5),
                     ),
                     child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.warning_amber_rounded, color: AppColors.warningOrange, size: 28),
+                        const Icon(Icons.schedule_rounded, color: AppColors.warningOrange, size: 24),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: Text(
-                            'Última avaliação realizada há mais de 12 meses. As condições de acessibilidade podem ter sofrido alterações.',
-                            style: TextStyle(
-                              color: AppColors.warningOrange,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                            ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Aviso de Atualização',
+                                style: TextStyle(
+                                  color: AppColors.warningOrange,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Última avaliação realizada há mais de 12 meses. As condições de acessibilidade podem ter sofrido alterações.',
+                                style: TextStyle(
+                                  color: AppColors.warningOrange,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                  height: 1.3,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
@@ -130,15 +268,15 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
                   ),
                 ],
 
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
 
-                // Route & Review Action Buttons
+                // Action Buttons: Route & Review
                 Row(
                   children: [
                     Expanded(
                       child: AccessibleButton(
                         label: 'Como Chegar',
-                        icon: Icons.directions,
+                        icon: Icons.directions_rounded,
                         onPressed: () {
                           ExternalNavigationLauncher.showNavigationPicker(
                             context: context,
@@ -153,7 +291,7 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
                     Expanded(
                       child: AccessibleButton(
                         label: 'Avaliar Local',
-                        icon: Icons.rate_review,
+                        icon: Icons.rate_review_rounded,
                         isSecondary: true,
                         onPressed: () {
                           if (!widget.isAuthenticated) {
@@ -176,24 +314,29 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
                   ],
                 ),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: 28),
 
                 // Criteria Breakdown Header
                 Semantics(
                   header: true,
                   child: Text(
                     'Avaliação por Critério de Acessibilidade',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: -0.2,
+                        ),
                   ),
                 ),
                 const SizedBox(height: 12),
 
                 // 7 Standard Criteria
                 ...place.criteriaBreakdown.map((crit) {
+                  final scoreColor = _getScoreColor(crit.averageScore);
+
                   return Padding(
-                    padding: const EdgeInsets.only(bottom: 12.0),
+                    padding: const EdgeInsets.only(bottom: 10.0),
                     child: AccessibleCard(
-                      padding: const EdgeInsets.all(12.0),
+                      padding: const EdgeInsets.all(14.0),
                       semanticLabel: SemanticsHelper.formatCriterionAnnouncement(
                         crit.title,
                         crit.averageScore.round(),
@@ -202,32 +345,51 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primaryContainer,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Icon(
+                                  _getCriterionIcon(crit.code),
+                                  size: 18,
+                                  color: AppColors.primaryBlue,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
                               Expanded(
                                 child: Text(
                                   crit.title,
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                                 ),
                               ),
-                              Text(
-                                crit.ratingsCount > 0 ? '${crit.averageScore.toStringAsFixed(1)} / 5.0' : 'Sem nota',
-                                style: const TextStyle(fontWeight: FontWeight.bold),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: crit.ratingsCount > 0 ? AppColors.surfaceMuted : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  crit.ratingsCount > 0 ? '${crit.averageScore.toStringAsFixed(1)} / 5.0' : 'Sem nota',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                    color: crit.ratingsCount > 0 ? scoreColor : AppColors.textHint,
+                                  ),
+                                ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 10),
                           ClipRRect(
-                            borderRadius: BorderRadius.circular(4),
+                            borderRadius: BorderRadius.circular(6),
                             child: LinearProgressIndicator(
                               value: crit.ratingsCount > 0 ? (crit.averageScore / 5.0) : 0,
                               minHeight: 8,
-                              backgroundColor: Colors.grey.shade300,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                crit.averageScore >= 4.0
-                                    ? AppColors.successGreen
-                                    : (crit.averageScore >= 2.5 ? Colors.amber.shade800 : AppColors.warningOrange),
-                              ),
+                              backgroundColor: AppColors.surfaceMuted,
+                              valueColor: AlwaysStoppedAnimation<Color>(scoreColor),
                             ),
                           ),
                         ],
@@ -236,14 +398,17 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
                   );
                 }),
 
-                const SizedBox(height: 20),
+                const SizedBox(height: 24),
 
                 // Reviews Section
                 Semantics(
                   header: true,
                   child: Text(
                     'Avaliações da Comunidade',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: -0.2,
+                        ),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -251,82 +416,133 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
                 BlocBuilder<ReviewsBloc, ReviewsState>(
                   builder: (context, rState) {
                     if (rState is ReviewsLoading) {
-                      return const Center(child: CircularProgressIndicator());
+                      return const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(24.0),
+                          child: CircularProgressIndicator(),
+                        ),
+                      );
                     }
 
                     if (rState is ReviewsLoaded) {
                       if (rState.reviews.isEmpty) {
-                        return const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 16.0),
-                          child: Text('Nenhuma avaliação cadastrada ainda. Seja o primeiro a avaliar!'),
+                        return Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceMuted,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Column(
+                            children: [
+                              const Icon(Icons.rate_review_outlined, size: 40, color: AppColors.textHint),
+                              const SizedBox(height: 10),
+                              const Text(
+                                'Nenhuma avaliação cadastrada ainda. Seja o primeiro a avaliar!',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(fontWeight: FontWeight.w600),
+                              ),
+                            ],
+                          ),
                         );
                       }
 
                       return Column(
                         children: rState.reviews.map((rev) {
-                          return AccessibleCard(
-                            padding: const EdgeInsets.all(14),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      rev.author.name,
-                                      style: const TextStyle(fontWeight: FontWeight.bold),
-                                    ),
-                                    if (rev.isUnderReview)
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                        decoration: BoxDecoration(
-                                          color: AppColors.underReviewYellow.withOpacity(0.2),
-                                          borderRadius: BorderRadius.circular(4),
-                                        ),
-                                        child: const Text(
-                                          'Sob análise',
-                                          style: TextStyle(
-                                            color: AppColors.underReviewYellow,
-                                            fontSize: 12,
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12.0),
+                            child: AccessibleCard(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      CircleAvatar(
+                                        radius: 18,
+                                        backgroundColor: AppColors.primaryContainer,
+                                        child: Text(
+                                          rev.author.name.isNotEmpty ? rev.author.name[0].toUpperCase() : 'U',
+                                          style: const TextStyle(
+                                            color: AppColors.primaryBlue,
                                             fontWeight: FontWeight.bold,
                                           ),
                                         ),
                                       ),
-                                  ],
-                                ),
-                                if (rev.generalComment != null && rev.generalComment!.isNotEmpty) ...[
-                                  const SizedBox(height: 8),
-                                  Text(rev.generalComment!),
-                                ],
-                                if (rev.media.isNotEmpty) ...[
-                                  const SizedBox(height: 10),
-                                  // Audiodescribed media display
-                                  ...rev.media.map((m) => Semantics(
-                                        image: true,
-                                        label: 'Foto: ${m.altText}',
-                                        child: Container(
-                                          margin: const EdgeInsets.only(top: 6),
-                                          padding: const EdgeInsets.all(8),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Text(
+                                          rev.author.name,
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                        ),
+                                      ),
+                                      if (rev.isUnderReview)
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                           decoration: BoxDecoration(
-                                            color: Colors.grey.shade100,
-                                            borderRadius: BorderRadius.circular(8),
+                                            color: AppColors.underReviewLight,
+                                            borderRadius: BorderRadius.circular(6),
+                                            border: Border.all(color: AppColors.underReviewYellow),
                                           ),
-                                          child: Row(
-                                            children: [
-                                              const Icon(Icons.photo_outlined, size: 24),
-                                              const SizedBox(width: 8),
-                                              Expanded(
-                                                child: Text(
-                                                  'Foto: ${m.altText}',
-                                                  style: const TextStyle(fontSize: 13, fontStyle: FontStyle.italic),
-                                                ),
-                                              ),
-                                            ],
+                                          child: const Text(
+                                            'Sob análise',
+                                            style: TextStyle(
+                                              color: AppColors.underReviewYellow,
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold,
+                                            ),
                                           ),
                                         ),
-                                      )),
+                                    ],
+                                  ),
+                                  if (rev.generalComment != null && rev.generalComment!.isNotEmpty) ...[
+                                    const SizedBox(height: 10),
+                                    Container(
+                                      width: double.infinity,
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.surfaceMuted,
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: Text(
+                                        rev.generalComment!,
+                                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.3),
+                                      ),
+                                    ),
+                                  ],
+                                  if (rev.media.isNotEmpty) ...[
+                                    const SizedBox(height: 12),
+                                    ...rev.media.map((m) => Semantics(
+                                          image: true,
+                                          label: 'Foto: ${m.altText}',
+                                          child: Container(
+                                            margin: const EdgeInsets.only(top: 6),
+                                            padding: const EdgeInsets.all(10),
+                                            decoration: BoxDecoration(
+                                              color: AppColors.primaryContainer.withOpacity(0.5),
+                                              borderRadius: BorderRadius.circular(10),
+                                              border: Border.all(color: AppColors.borderLight),
+                                            ),
+                                            child: Row(
+                                              children: [
+                                                const Icon(Icons.photo_camera_rounded, size: 22, color: AppColors.primaryBlue),
+                                                const SizedBox(width: 10),
+                                                Expanded(
+                                                  child: Text(
+                                                    'Foto: ${m.altText}',
+                                                    style: const TextStyle(
+                                                      fontSize: 13,
+                                                      fontStyle: FontStyle.italic,
+                                                      color: AppColors.textPrimary,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        )),
+                                  ],
                                 ],
-                              ],
+                              ),
                             ),
                           );
                         }).toList(),

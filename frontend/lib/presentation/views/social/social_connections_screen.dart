@@ -8,7 +8,14 @@ import '../../components/accessible_card.dart';
 import 'chat_conversation_screen.dart';
 
 class SocialConnectionsScreen extends StatefulWidget {
-  const SocialConnectionsScreen({super.key});
+  final bool isAuthenticated;
+  final VoidCallback? onNavigateToLogin;
+
+  const SocialConnectionsScreen({
+    super.key,
+    this.isAuthenticated = true,
+    this.onNavigateToLogin,
+  });
 
   @override
   State<SocialConnectionsScreen> createState() => _SocialConnectionsScreenState();
@@ -21,7 +28,17 @@ class _SocialConnectionsScreenState extends State<SocialConnectionsScreen> with 
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    context.read<SocialBloc>().add(LoadSocialDataEvent());
+    if (widget.isAuthenticated) {
+      context.read<SocialBloc>().add(LoadSocialDataEvent());
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant SocialConnectionsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!oldWidget.isAuthenticated && widget.isAuthenticated) {
+      context.read<SocialBloc>().add(LoadSocialDataEvent());
+    }
   }
 
   @override
@@ -32,6 +49,64 @@ class _SocialConnectionsScreenState extends State<SocialConnectionsScreen> with 
 
   @override
   Widget build(BuildContext context) {
+    if (!widget.isAuthenticated) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Comunidade e Amigos'),
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: const BoxDecoration(
+                    color: AppColors.primaryContainer,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.people_outline,
+                    size: 56,
+                    color: AppColors.primaryBlue,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Conecte-se com a Comunidade',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primaryBlue,
+                      ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Encontre amigos que compartilham experiências semelhantes de acessibilidade, troque recomendações de rotas e converse diretamente pelo chat.',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppColors.textSecondary,
+                        height: 1.4,
+                      ),
+                ),
+                const SizedBox(height: 28),
+                AccessibleButton(
+                  label: 'Entrar ou Cadastrar',
+                  icon: Icons.login,
+                  onPressed: () {
+                    if (widget.onNavigateToLogin != null) {
+                      widget.onNavigateToLogin!();
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Comunidade e Amigos'),
@@ -40,6 +115,8 @@ class _SocialConnectionsScreenState extends State<SocialConnectionsScreen> with 
           labelColor: Colors.white,
           unselectedLabelColor: Colors.white70,
           indicatorColor: AppColors.hcPrimaryYellow,
+          indicatorWeight: 3,
+          labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
           tabs: const [
             Tab(text: 'Amigos'),
             Tab(text: 'Solicitações'),
@@ -47,10 +124,41 @@ class _SocialConnectionsScreenState extends State<SocialConnectionsScreen> with 
           ],
         ),
       ),
-      body: BlocBuilder<SocialBloc, SocialState>(
+      body: BlocConsumer<SocialBloc, SocialState>(
+        listener: (context, state) {
+          if (state is SocialLoaded) {
+            if (state.actionMessage != null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.actionMessage!),
+                  backgroundColor: AppColors.successGreen,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            }
+            if (state.actionError != null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.actionError!),
+                  backgroundColor: AppColors.warningOrange,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            }
+          }
+        },
         builder: (context, state) {
           if (state is SocialLoading) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Carregando comunidade...'),
+                ],
+              ),
+            );
           }
 
           if (state is SocialError) {
@@ -60,10 +168,26 @@ class _SocialConnectionsScreenState extends State<SocialConnectionsScreen> with 
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text('Erro ao carregar conexões: ${state.message}', textAlign: TextAlign.center),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: const BoxDecoration(
+                        color: AppColors.warningLight,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.error_outline, size: 48, color: AppColors.warningOrange),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Erro ao carregar conexões:\n${state.message}',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: AppColors.textPrimary,
+                          ),
+                    ),
                     const SizedBox(height: 16),
                     AccessibleButton(
                       label: 'Tentar Novamente',
+                      icon: Icons.refresh,
                       onPressed: () => context.read<SocialBloc>().add(LoadSocialDataEvent()),
                     ),
                   ],
@@ -78,7 +202,36 @@ class _SocialConnectionsScreenState extends State<SocialConnectionsScreen> with 
               children: [
                 // 1. Friends Tab
                 state.friends.isEmpty
-                    ? const Center(child: Text('Você ainda não tem amigos conectados.'))
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(32),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(20),
+                                decoration: BoxDecoration(
+                                  color: AppColors.surfaceMuted,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.people_outline, size: 54, color: AppColors.textHint),
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Você ainda não tem amigos conectados.',
+                                textAlign: TextAlign.center,
+                                style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 6),
+                              const Text(
+                                'Adicione amigos na aba de Sugestões para conversar diretamente sobre rotas e acessibilidade.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(color: AppColors.textHint),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
                     : ListView.builder(
                         itemCount: state.friends.length,
                         padding: const EdgeInsets.all(12),
@@ -101,8 +254,16 @@ class _SocialConnectionsScreenState extends State<SocialConnectionsScreen> with 
                             child: Row(
                               children: [
                                 CircleAvatar(
-                                  backgroundColor: AppColors.primaryBlue,
-                                  child: Text(friend.peer.name.isNotEmpty ? friend.peer.name[0] : 'U'),
+                                  radius: 22,
+                                  backgroundColor: AppColors.primaryContainer,
+                                  child: Text(
+                                    friend.peer.name.isNotEmpty ? friend.peer.name[0].toUpperCase() : 'U',
+                                    style: const TextStyle(
+                                      color: AppColors.primaryBlue,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 18,
+                                    ),
+                                  ),
                                 ),
                                 const SizedBox(width: 14),
                                 Expanded(
@@ -113,14 +274,24 @@ class _SocialConnectionsScreenState extends State<SocialConnectionsScreen> with 
                                         friend.peer.name,
                                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                                       ),
+                                      const SizedBox(height: 2),
                                       Text(
                                         friend.peer.handle,
-                                        style: Theme.of(context).textTheme.bodySmall,
+                                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                              color: AppColors.textHint,
+                                            ),
                                       ),
                                     ],
                                   ),
                                 ),
-                                const Icon(Icons.chat_bubble_outline, color: AppColors.primaryBlue),
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primaryContainer,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: const Icon(Icons.chat_bubble_outline_rounded, color: AppColors.primaryBlue, size: 20),
+                                ),
                               ],
                             ),
                           );
@@ -129,7 +300,30 @@ class _SocialConnectionsScreenState extends State<SocialConnectionsScreen> with 
 
                 // 2. Pending Requests Tab
                 state.pendingReceived.isEmpty
-                    ? const Center(child: Text('Nenhuma solicitação de amizade pendente.'))
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(32),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(20),
+                                decoration: BoxDecoration(
+                                  color: AppColors.surfaceMuted,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.mark_email_read_outlined, size: 54, color: AppColors.textHint),
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Nenhuma solicitação de amizade pendente.',
+                                textAlign: TextAlign.center,
+                                style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
                     : ListView.builder(
                         itemCount: state.pendingReceived.length,
                         padding: const EdgeInsets.all(12),
@@ -139,11 +333,26 @@ class _SocialConnectionsScreenState extends State<SocialConnectionsScreen> with 
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  '${req.peer.name} (${req.peer.handle}) quer se conectar',
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                Row(
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 20,
+                                      backgroundColor: AppColors.secondaryContainer,
+                                      child: Text(
+                                        req.peer.name.isNotEmpty ? req.peer.name[0].toUpperCase() : 'U',
+                                        style: const TextStyle(color: AppColors.accentTeal, fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        '${req.peer.name} (${req.peer.handle}) quer se conectar',
+                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(height: 12),
+                                const SizedBox(height: 14),
                                 Row(
                                   children: [
                                     Expanded(
@@ -185,7 +394,30 @@ class _SocialConnectionsScreenState extends State<SocialConnectionsScreen> with 
 
                 // 3. Recommendations Tab
                 state.recommendations.isEmpty
-                    ? const Center(child: Text('Nenhuma recomendação disponível no momento.'))
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(32),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(20),
+                                decoration: BoxDecoration(
+                                  color: AppColors.surfaceMuted,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.explore_outlined, size: 54, color: AppColors.textHint),
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Nenhuma recomendação disponível no momento.',
+                                textAlign: TextAlign.center,
+                                style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
                     : ListView.builder(
                         itemCount: state.recommendations.length,
                         padding: const EdgeInsets.all(12),
@@ -195,8 +427,15 @@ class _SocialConnectionsScreenState extends State<SocialConnectionsScreen> with 
                             child: Row(
                               children: [
                                 CircleAvatar(
-                                  backgroundColor: AppColors.accentTeal,
-                                  child: Text(rec.name.isNotEmpty ? rec.name[0] : 'U'),
+                                  radius: 20,
+                                  backgroundColor: AppColors.secondaryContainer,
+                                  child: Text(
+                                    rec.name.isNotEmpty ? rec.name[0].toUpperCase() : 'U',
+                                    style: const TextStyle(
+                                      color: AppColors.accentTeal,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                                 ),
                                 const SizedBox(width: 14),
                                 Expanded(
@@ -205,17 +444,21 @@ class _SocialConnectionsScreenState extends State<SocialConnectionsScreen> with 
                                     children: [
                                       Text(
                                         rec.name,
-                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                                       ),
+                                      const SizedBox(height: 2),
                                       Text(
                                         rec.handle,
-                                        style: Theme.of(context).textTheme.bodySmall,
+                                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                              color: AppColors.textHint,
+                                            ),
                                       ),
                                     ],
                                   ),
                                 ),
                                 AccessibleButton(
                                   label: 'Conectar',
+                                  icon: Icons.person_add_alt_1,
                                   minHeight: 40,
                                   onPressed: () {
                                     context.read<SocialBloc>().add(

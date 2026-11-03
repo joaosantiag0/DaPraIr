@@ -1,13 +1,27 @@
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'auth_interceptor.dart';
 
 class DioClient {
   late final Dio dio;
 
-  DioClient({String baseUrl = 'http://localhost:3333'}) {
+  static String get defaultBaseUrl {
+    if (kIsWeb) return 'http://localhost:3333';
+    try {
+      if (Platform.isAndroid) {
+        return 'http://10.0.2.2:3333';
+      }
+    } catch (_) {}
+    return 'http://localhost:3333';
+  }
+
+  DioClient({String? baseUrl}) {
+    final effectiveBaseUrl = baseUrl ?? defaultBaseUrl;
+
     dio = Dio(
       BaseOptions(
-        baseUrl: baseUrl,
+        baseUrl: effectiveBaseUrl,
         connectTimeout: const Duration(seconds: 10),
         receiveTimeout: const Duration(seconds: 10),
         headers: {

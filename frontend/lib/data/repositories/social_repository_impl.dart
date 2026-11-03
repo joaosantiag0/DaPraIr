@@ -14,16 +14,22 @@ class SocialRepositoryImpl implements SocialRepository {
     final list = (response.data as List<dynamic>?) ?? [];
 
     return list.map((json) {
-      final p = json['peer'] as Map<String, dynamic>;
+      final map = json as Map<String, dynamic>? ?? {};
+      final p = (map['peer'] as Map<String, dynamic>?) ?? {};
+      final rawDate = map['createdAt'] ?? map['created_at'];
+      final createdAt = rawDate != null
+          ? DateTime.tryParse(rawDate.toString()) ?? DateTime.now()
+          : DateTime.now();
+
       return SocialConnection(
-        id: json['id'] as String,
-        status: json['status'] as String,
-        isOutgoing: json['isOutgoing'] as bool? ?? false,
-        createdAt: DateTime.parse(json['createdAt'] as String),
+        id: (map['id'] ?? '').toString(),
+        status: (map['status'] ?? 'PENDING').toString(),
+        isOutgoing: map['isOutgoing'] as bool? ?? false,
+        createdAt: createdAt,
         peer: SocialPeer(
-          id: p['id'] as String,
-          name: p['name'] as String,
-          handle: p['handle'] as String,
+          id: (p['id'] ?? '').toString(),
+          name: (p['name'] ?? 'Usuário').toString(),
+          handle: (p['handle'] ?? '').toString(),
           avatarUrl: p['avatarUrl'] as String?,
           bio: p['bio'] as String?,
         ),
@@ -37,12 +43,17 @@ class SocialRepositoryImpl implements SocialRepository {
       '/api/v1/social/connections',
       data: {'targetUserId': targetUserId},
     );
-    final json = response.data as Map<String, dynamic>;
+    final map = response.data as Map<String, dynamic>? ?? {};
+    final rawDate = map['created_at'] ?? map['createdAt'];
+    final createdAt = rawDate != null
+        ? DateTime.tryParse(rawDate.toString()) ?? DateTime.now()
+        : DateTime.now();
+
     return SocialConnection(
-      id: json['id'] as String,
-      status: json['status'] as String,
+      id: (map['id'] ?? '').toString(),
+      status: (map['status'] ?? 'PENDING').toString(),
       isOutgoing: true,
-      createdAt: DateTime.parse(json['created_at'] as String),
+      createdAt: createdAt,
       peer: SocialPeer(id: targetUserId, name: '', handle: ''),
     );
   }
@@ -53,12 +64,17 @@ class SocialRepositoryImpl implements SocialRepository {
       '/api/v1/social/connections/$connectionId',
       data: {'status': status},
     );
-    final json = response.data as Map<String, dynamic>;
+    final map = response.data as Map<String, dynamic>? ?? {};
+    final rawDate = map['created_at'] ?? map['createdAt'];
+    final createdAt = rawDate != null
+        ? DateTime.tryParse(rawDate.toString()) ?? DateTime.now()
+        : DateTime.now();
+
     return SocialConnection(
-      id: json['id'] as String,
-      status: json['status'] as String,
+      id: (map['id'] ?? connectionId).toString(),
+      status: (map['status'] ?? status).toString(),
       isOutgoing: false,
-      createdAt: DateTime.parse(json['created_at'] as String),
+      createdAt: createdAt,
       peer: const SocialPeer(id: '', name: '', handle: ''),
     );
   }
@@ -68,14 +84,17 @@ class SocialRepositoryImpl implements SocialRepository {
     final response = await dioClient.dio.get('/api/v1/social/recommendations');
     final list = (response.data as List<dynamic>?) ?? [];
 
-    return list.map((json) => UserProfile(
-      id: json['id'] as String,
-      name: json['name'] as String,
-      email: '',
-      handle: json['handle'] as String,
-      avatarUrl: json['avatarUrl'] as String?,
-      bio: json['bio'] as String?,
-      badges: (json['badges'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
-    )).toList();
+    return list.map((json) {
+      final map = json as Map<String, dynamic>? ?? {};
+      return UserProfile(
+        id: (map['id'] ?? '').toString(),
+        name: (map['name'] ?? 'Usuário').toString(),
+        email: (map['email'] ?? '').toString(),
+        handle: (map['handle'] ?? '').toString(),
+        avatarUrl: map['avatarUrl'] as String?,
+        bio: map['bio'] as String?,
+        badges: (map['badges'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
+      );
+    }).toList();
   }
 }

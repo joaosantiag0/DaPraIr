@@ -44,8 +44,14 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             onNavigateToLogin: _onNavigateToLogin,
           ),
           const EventsListScreen(),
-          const SocialConnectionsScreen(),
-          const ProfilePrivacySettingsScreen(),
+          SocialConnectionsScreen(
+            isAuthenticated: isAuthenticated,
+            onNavigateToLogin: _onNavigateToLogin,
+          ),
+          ProfilePrivacySettingsScreen(
+            isAuthenticated: isAuthenticated,
+            onNavigateToLogin: _onNavigateToLogin,
+          ),
         ];
 
         return Scaffold(

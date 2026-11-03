@@ -31,6 +31,13 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
     context.read<ChatBloc>().add(LoadChatMessagesEvent(widget.peerUserId));
   }
 
+  @override
+  void dispose() {
+    _messageController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
   void _sendMessage() {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
@@ -55,20 +62,45 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        title: Row(
           children: [
-            Text(widget.peerName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            Text(widget.peerHandle, style: const TextStyle(fontSize: 12, color: Colors.white70)),
+            CircleAvatar(
+              radius: 18,
+              backgroundColor: Colors.white24,
+              child: Text(
+                widget.peerName.isNotEmpty ? widget.peerName[0].toUpperCase() : 'U',
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.peerName,
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    widget.peerHandle,
+                    style: const TextStyle(fontSize: 12, color: Colors.white70),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.block),
+            icon: const Icon(Icons.block_outlined),
             tooltip: 'Bloquear usuário e fechar conversa',
             onPressed: () {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('${widget.peerName} foi bloqueado.')),
+                SnackBar(
+                  content: Text('${widget.peerName} foi bloqueado.'),
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
               );
               Navigator.pop(context);
             },
@@ -79,16 +111,23 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
         children: [
           // Security Notice
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            color: Colors.blue.shade50,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: const BoxDecoration(
+              color: AppColors.primaryContainer,
+              border: Border(bottom: BorderSide(color: AppColors.borderLight)),
+            ),
             child: const Row(
               children: [
                 Icon(Icons.shield_outlined, size: 20, color: AppColors.primaryBlue),
-                SizedBox(width: 8),
+                SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     'Conversa segura e direta entre amigos verificados no DáPraIr?.',
-                    style: TextStyle(fontSize: 12, color: AppColors.primaryBlue, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.primaryBlue,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ],
@@ -129,14 +168,40 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
 
                 if (state is ChatLoaded) {
                   if (state.messages.isEmpty) {
-                    return const Center(
-                      child: Text('Nenhuma mensagem trocada ainda. Envie um "Olá!"'),
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(32.0),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: const BoxDecoration(
+                                color: AppColors.primaryContainer,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.chat_bubble_outline_rounded, size: 42, color: AppColors.primaryBlue),
+                            ),
+                            const SizedBox(height: 14),
+                            Text(
+                              'Nenhuma mensagem trocada ainda.',
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 6),
+                            const Text(
+                              'Envie um "Olá!" para iniciar a conversa sobre acessibilidade.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: AppColors.textHint),
+                            ),
+                          ],
+                        ),
+                      ),
                     );
                   }
 
                   return ListView.builder(
                     controller: _scrollController,
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     itemCount: state.messages.length,
                     itemBuilder: (context, i) {
                       final msg = state.messages[i];
@@ -149,17 +214,57 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                           child: Container(
                             margin: const EdgeInsets.symmetric(vertical: 4),
                             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                            constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+                            constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.76),
                             decoration: BoxDecoration(
-                              color: isMe ? AppColors.primaryBlue : Colors.grey.shade200,
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Text(
-                              msg.content,
-                              style: TextStyle(
-                                color: isMe ? Colors.white : AppColors.textPrimary,
-                                fontSize: 15,
+                              color: isMe ? AppColors.primaryBlue : AppColors.surfaceLight,
+                              borderRadius: BorderRadius.only(
+                                topLeft: const Radius.circular(16),
+                                topRight: const Radius.circular(16),
+                                bottomLeft: Radius.circular(isMe ? 16 : 4),
+                                bottomRight: Radius.circular(isMe ? 4 : 16),
                               ),
+                              border: isMe ? null : Border.all(color: AppColors.borderLight, width: 1.2),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.04),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  msg.content,
+                                  style: TextStyle(
+                                    color: isMe ? Colors.white : AppColors.textPrimary,
+                                    fontSize: 15,
+                                    height: 1.3,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      '${msg.createdAt.hour.toString().padLeft(2, '0')}:${msg.createdAt.minute.toString().padLeft(2, '0')}',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: isMe ? Colors.white70 : AppColors.textHint,
+                                      ),
+                                    ),
+                                    if (isMe) ...[
+                                      const SizedBox(width: 4),
+                                      Icon(
+                                        msg.status == 'READ' ? Icons.done_all : Icons.done,
+                                        size: 14,
+                                        color: Colors.white70,
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ],
                             ),
                           ),
                         ),
@@ -176,10 +281,10 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
           // Composer Input
           SafeArea(
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: Theme.of(context).cardColor,
-                border: const Border(top: BorderSide(color: Color(0xFFE0E0E0))),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: const BoxDecoration(
+                color: AppColors.surfaceLight,
+                border: Border(top: BorderSide(color: AppColors.borderLight, width: 1.2)),
               ),
               child: Row(
                 children: [
@@ -187,13 +292,24 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                     child: Semantics(
                       textField: true,
                       label: 'Digite sua mensagem para ${widget.peerName}',
-                      child: TextField(
-                        controller: _messageController,
-                        maxLines: null,
-                        keyboardType: TextInputType.multiline,
-                        decoration: const InputDecoration(
-                          hintText: 'Digite uma mensagem...',
-                          contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceMuted,
+                          borderRadius: BorderRadius.circular(22),
+                          border: Border.all(color: AppColors.borderLight),
+                        ),
+                        child: TextField(
+                          controller: _messageController,
+                          maxLines: null,
+                          keyboardType: TextInputType.multiline,
+                          decoration: const InputDecoration(
+                            hintText: 'Digite uma mensagem...',
+                            hintStyle: TextStyle(color: AppColors.textHint, fontSize: 14),
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          ),
                         ),
                       ),
                     ),
@@ -201,7 +317,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                   const SizedBox(width: 8),
                   AccessibleButton(
                     label: 'Enviar',
-                    icon: Icons.send,
+                    icon: Icons.send_rounded,
                     minHeight: 48,
                     onPressed: _sendMessage,
                   ),

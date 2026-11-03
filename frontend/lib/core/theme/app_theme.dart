@@ -12,8 +12,11 @@ class AppTheme {
       colorScheme: const ColorScheme.light(
         primary: AppColors.primaryBlue,
         onPrimary: AppColors.surfaceLight,
+        primaryContainer: AppColors.primaryContainer,
+        onPrimaryContainer: AppColors.primaryDark,
         secondary: AppColors.accentTeal,
         onSecondary: AppColors.surfaceLight,
+        secondaryContainer: AppColors.secondaryContainer,
         surface: AppColors.surfaceLight,
         onSurface: AppColors.textPrimary,
         error: AppColors.warningOrange,
@@ -26,12 +29,15 @@ class AppTheme {
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           backgroundColor: AppColors.primaryBlue,
           foregroundColor: AppColors.surfaceLight,
+          elevation: 1.5,
+          shadowColor: AppColors.primaryDark.withOpacity(0.3),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
           textStyle: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
+            letterSpacing: 0.2,
           ),
         ),
       ),
@@ -47,13 +53,14 @@ class AppTheme {
           textStyle: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
+            letterSpacing: 0.2,
           ),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.surfaceLight,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppColors.borderLight, width: 1.5),
@@ -75,12 +82,39 @@ class AppTheme {
       ),
       cardTheme: CardThemeData(
         color: AppColors.surfaceLight,
-        elevation: 2,
+        elevation: 0.5,
+        shadowColor: Colors.black.withOpacity(0.06),
         margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: Color(0xFFE0E0E0), width: 1),
+          side: const BorderSide(color: AppColors.borderLight, width: 1.2),
         ),
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: AppColors.surfaceLight,
+        elevation: 3,
+        shadowColor: Colors.black.withOpacity(0.08),
+        indicatorColor: AppColors.primaryContainer,
+        iconTheme: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return const IconThemeData(color: AppColors.primaryBlue, size: 26);
+          }
+          return const IconThemeData(color: AppColors.textSecondary, size: 24);
+        }),
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return const TextStyle(
+              color: AppColors.primaryBlue,
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+            );
+          }
+          return const TextStyle(
+            color: AppColors.textSecondary,
+            fontWeight: FontWeight.w500,
+            fontSize: 12,
+          );
+        }),
       ),
       appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.primaryBlue,
@@ -91,6 +125,19 @@ class AppTheme {
           fontSize: 20,
           fontWeight: FontWeight.bold,
           color: AppColors.surfaceLight,
+          letterSpacing: 0.2,
+        ),
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: AppColors.surfaceMuted,
+        side: const BorderSide(color: AppColors.borderLight),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        labelStyle: const TextStyle(
+          color: AppColors.textPrimary,
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );

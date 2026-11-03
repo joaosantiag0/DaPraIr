@@ -1,8 +1,35 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:dio/dio.dart';
 import '../../../domain/entities/social_connection.dart';
 import '../../../domain/entities/user_profile.dart';
 import '../../../domain/repositories/social_repository.dart';
+
+// Helper to format friendly user messages
+String cleanSocialErrorMessage(dynamic error) {
+  if (error is DioException) {
+    final data = error.response?.data;
+    if (data is Map && data['message'] != null) {
+      return data['message'].toString();
+    }
+    if (error.response?.statusCode == 401) {
+      return 'Você precisa estar conectado para acessar a comunidade e amigos.';
+    }
+    if (error.response?.statusCode == 403) {
+      return 'Você não tem permissão para realizar esta ação.';
+    }
+    if (error.response?.statusCode == 404) {
+      return 'Usuário ou conexão não encontrada.';
+    }
+    if (error.type == DioExceptionType.connectionTimeout || error.type == DioExceptionType.receiveTimeout) {
+      return 'Tempo de resposta excedido. Verifique sua conexão com a internet.';
+    }
+    if (error.type == DioExceptionType.connectionError) {
+      return 'Não foi possível conectar ao servidor. Verifique se o servidor está ativo.';
+    }
+  }
+  return error.toString();
+}
 
 // Events
 abstract class SocialEvent extends Equatable {
@@ -43,16 +70,38 @@ class SocialLoaded extends SocialState {
   final List<SocialConnection> pendingReceived;
   final List<SocialConnection> pendingSent;
   final List<UserProfile> recommendations;
+  final String? actionMessage;
+  final String? actionError;
 
   const SocialLoaded({
     required this.friends,
     required this.pendingReceived,
     required this.pendingSent,
     required this.recommendations,
+    this.actionMessage,
+    this.actionError,
   });
 
+  SocialLoaded copyWith({
+    List<SocialConnection>? friends,
+    List<SocialConnection>? pendingReceived,
+    List<SocialConnection>? pendingSent,
+    List<UserProfile>? recommendations,
+    String? actionMessage,
+    String? actionError,
+  }) {
+    return SocialLoaded(
+      friends: friends ?? this.friends,
+      pendingReceived: pendingReceived ?? this.pendingReceived,
+      pendingSent: pendingSent ?? this.pendingSent,
+      recommendations: recommendations ?? this.recommendations,
+      actionMessage: actionMessage,
+      actionError: actionError,
+    );
+  }
+
   @override
-  List<Object?> get props => [friends, pendingReceived, pendingSent, recommendations];
+  List<Object?> get props => [friends, pendingReceived, pendingSent, recommendations, actionMessage, actionError];
 }
 
 class SocialError extends SocialState {
@@ -89,25 +138,62 @@ class SocialBloc extends Bloc<SocialEvent, SocialState> {
         recommendations: recommendations,
       ));
     } catch (e) {
-      emit(SocialError(e.toString()));
+      emit(SocialError(cleanSocialErrorMessage(e)));
     }
   }
 
   Future<void> _onSendRequest(SendConnectionRequestEvent event, Emitter<SocialState> emit) async {
     try {
       await repository.sendConnectionRequest(event.targetUserId);
-      add(LoadSocialDataEvent());
+      final connections = await repository.getConnections();
+      final recommendations = await repository.getRecommendations();
+
+      final friends = connections.where((c) => c.status == 'ACCEPTED').toList();
+      final pendingReceived = connections.where((c) => c.status == 'PENDING' && !c.isOutgoing).toList();
+      final pendingSent = connections.where((c) => c.status == 'PENDING' && c.isOutgoing).toList();
+
+      emit(SocialLoaded(
+        friends: friends,
+        pendingReceived: pendingReceived,
+        pendingSent: pendingSent,
+        recommendations: recommendations,
+        actionMessage: 'Solicitação de conexão enviada com sucesso!',
+      ));
     } catch (e) {
-      emit(SocialError(e.toString()));
+      if (state is SocialLoaded) {
+        final current = state as SocialLoaded;
+        emit(current.copyWith(actionError: cleanSocialErrorMessage(e)));
+      } else {
+        emit(SocialError(cleanSocialErrorMessage(e)));
+      }
     }
   }
 
   Future<void> _onUpdateStatus(UpdateConnectionStatusEvent event, Emitter<SocialState> emit) async {
     try {
       await repository.updateConnectionStatus(event.connectionId, event.status);
-      add(LoadSocialDataEvent());
+      final connections = await repository.getConnections();
+      final recommendations = await repository.getRecommendations();
+
+      final friends = connections.where((c) => c.status == 'ACCEPTED').toList();
+      final pendingReceived = connections.where((c) => c.status == 'PENDING' && !c.isOutgoing).toList();
+      final pendingSent = connections.where((c) => c.status == 'PENDING' && c.isOutgoing).toList();
+
+      final msg = event.status == 'ACCEPTED' ? 'Solicitação aceita!' : 'Solicitação recusada.';
+      emit(SocialLoaded(
+        friends: friends,
+        pendingReceived: pendingReceived,
+        pendingSent: pendingSent,
+        recommendations: recommendations,
+        actionMessage: msg,
+      ));
     } catch (e) {
-      emit(SocialError(e.toString()));
+      if (state is SocialLoaded) {
+        final current = state as SocialLoaded;
+        emit(current.copyWith(actionError: cleanSocialErrorMessage(e)));
+      } else {
+        emit(SocialError(cleanSocialErrorMessage(e)));
+      }
     }
   }
 }

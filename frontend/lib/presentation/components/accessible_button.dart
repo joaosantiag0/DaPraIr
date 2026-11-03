@@ -23,14 +23,17 @@ class AccessibleButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final effectiveEnabled = onPressed != null && !isLoading;
+    final primaryColor = Theme.of(context).colorScheme.primary;
 
     final childWidget = isLoading
-        ? const SizedBox(
-            width: 24,
-            height: 24,
+        ? SizedBox(
+            width: 22,
+            height: 22,
             child: CircularProgressIndicator(
               strokeWidth: 2.5,
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              valueColor: AlwaysStoppedAnimation<Color>(
+                isSecondary ? primaryColor : Colors.white,
+              ),
             ),
           )
         : Row(

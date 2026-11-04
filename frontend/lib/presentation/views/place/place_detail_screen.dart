@@ -11,6 +11,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../components/accessible_button.dart';
 import '../../components/accessible_card.dart';
 import '../../components/guest_action_dialog.dart';
+import '../../components/responsive_container.dart';
 import 'submit_review_screen.dart';
 
 class PlaceDetailScreen extends StatefulWidget {
@@ -165,9 +166,10 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
 
           return SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
+            child: ResponsiveContainer.medium(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
                 // Category pill
                 Row(
                   children: [
@@ -727,8 +729,9 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
                 ),
               ],
             ),
-          );
-        },
+          ),
+        );
+      },
       ),
     );
   }

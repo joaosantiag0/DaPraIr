@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../bloc/profile/profile_bloc.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../components/accessible_button.dart';
+import '../../components/responsive_container.dart';
 import 'account_data_governance_screen.dart';
 
 class ProfilePrivacySettingsScreen extends StatefulWidget {
@@ -107,9 +108,10 @@ class _ProfilePrivacySettingsScreenState extends State<ProfilePrivacySettingsScr
         builder: (context, state) {
           return SingleChildScrollView(
             padding: const EdgeInsets.all(20.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
+            child: ResponsiveContainer.medium(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
                 // Top Shield Banner
                 Container(
                   padding: const EdgeInsets.all(16),
@@ -298,8 +300,9 @@ class _ProfilePrivacySettingsScreenState extends State<ProfilePrivacySettingsScr
                 const SizedBox(height: 24),
               ],
             ),
-          );
-        },
+          ),
+        );
+      },
       ),
     );
   }

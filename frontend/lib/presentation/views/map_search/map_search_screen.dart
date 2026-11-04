@@ -11,6 +11,7 @@ import '../../components/accessible_card.dart';
 import '../../components/accessible_button.dart';
 import '../../components/guest_action_dialog.dart';
 import '../../components/location_selector_sheet.dart';
+import '../../components/responsive_container.dart';
 import '../place/place_detail_screen.dart';
 import '../place/create_place_screen.dart';
 import '../auth/login_screen.dart';
@@ -303,10 +304,11 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // Banner "Exibindo resultados perto de..." with "Alterar" button
-          _buildLocationBanner(),
+      body: ResponsiveContainer.wide(
+        child: Column(
+          children: [
+            // Banner "Exibindo resultados perto de..." with "Alterar" button
+            _buildLocationBanner(),
 
           // Search Input Container with Explicit "Buscar" Button & Debounce
           Padding(
@@ -788,6 +790,7 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 }

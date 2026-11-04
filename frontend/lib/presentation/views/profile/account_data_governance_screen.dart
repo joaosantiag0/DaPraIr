@@ -5,6 +5,7 @@ import '../../bloc/auth/auth_bloc.dart';
 import '../../../core/accessibility/semantics_helper.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../components/accessible_button.dart';
+import '../../components/responsive_container.dart';
 
 class AccountDataGovernanceScreen extends StatelessWidget {
   const AccountDataGovernanceScreen({super.key});
@@ -75,7 +76,8 @@ class AccountDataGovernanceScreen extends StatelessWidget {
         builder: (context, state) {
           return SingleChildScrollView(
             padding: const EdgeInsets.all(20.0),
-            child: Column(
+            child: ResponsiveContainer.medium(
+              child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 // Informative Header
@@ -242,8 +244,9 @@ class AccountDataGovernanceScreen extends StatelessWidget {
                 const SizedBox(height: 24),
               ],
             ),
-          );
-        },
+          ),
+        );
+      },
       ),
     );
   }

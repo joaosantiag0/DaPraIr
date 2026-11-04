@@ -9,6 +9,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../components/accessible_button.dart';
 import '../../components/accessible_text_field.dart';
 import '../../components/guest_action_dialog.dart';
+import '../../components/responsive_container.dart';
 import '../auth/login_screen.dart';
 
 class SubmitReviewScreen extends StatefulWidget {
@@ -327,9 +328,10 @@ class _SubmitReviewScreenState extends State<SubmitReviewScreen> {
         },
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
+          child: ResponsiveContainer.medium(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
               // Intro Guidance Card
               Container(
                 padding: const EdgeInsets.all(14),
@@ -649,6 +651,7 @@ class _SubmitReviewScreenState extends State<SubmitReviewScreen> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }

@@ -4,6 +4,7 @@ import '../../bloc/auth/auth_bloc.dart';
 import '../../../core/accessibility/semantics_helper.dart';
 import '../../components/accessible_button.dart';
 import '../../components/accessible_text_field.dart';
+import '../../components/responsive_container.dart';
 import 'onboarding_accessibility_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -72,7 +73,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
         builder: (context, state) {
           return SingleChildScrollView(
             padding: const EdgeInsets.all(24.0),
-            child: Column(
+            child: ResponsiveContainer.narrow(
+              child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Semantics(
@@ -139,8 +141,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
               ],
             ),
-          );
-        },
+          ),
+        );
+      },
       ),
     );
   }

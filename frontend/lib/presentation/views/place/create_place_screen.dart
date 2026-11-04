@@ -8,6 +8,7 @@ import '../../../domain/entities/place.dart';
 import '../../../domain/repositories/places_repository.dart';
 import '../../components/accessible_button.dart';
 import '../../components/accessible_text_field.dart';
+import '../../components/responsive_container.dart';
 import 'submit_review_screen.dart';
 
 class CreatePlaceScreen extends StatefulWidget {
@@ -291,10 +292,8 @@ class _CreatePlaceScreenState extends State<CreatePlaceScreen> {
           }
         },
         builder: (context, state) {
-          if (_isManualMode) {
-            return _buildManualForm(state);
-          }
-          return _buildPlacesSearch(state);
+          final content = _isManualMode ? _buildManualForm(state) : _buildPlacesSearch(state);
+          return ResponsiveContainer.medium(child: content);
         },
       ),
     );

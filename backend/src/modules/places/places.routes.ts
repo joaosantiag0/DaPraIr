@@ -17,15 +17,15 @@ const searchPlacesQuerySchema = z.object({
 
 const createPlaceSchema = z.object({
   name: z.string().min(2),
-  description: z.string().optional(),
+  description: z.string().nullable().optional(),
   category: z.string(),
   address: z.string().min(5),
   city: z.string().min(2),
   state: z.string().min(2),
-  postalCode: z.string().optional(),
+  postalCode: z.string().nullable().optional(),
   latitude: z.number(),
   longitude: z.number(),
-  googlePlaceId: z.string().optional(),
+  googlePlaceId: z.string().nullable().optional(),
 });
 
 export async function placesRoutes(app: FastifyInstance) {

@@ -1,10 +1,8 @@
-import 'dart:convert';
-import 'package:drift/drift.dart';
+import 'package:dio/dio.dart';
 import '../../core/network/dio_client.dart';
 import '../../domain/entities/place.dart';
 import '../../domain/entities/review.dart';
 import '../../domain/repositories/places_repository.dart';
-import '../local/app_database.dart';
 import '../local/places_dao.dart';
 
 class PlacesRepositoryImpl implements PlacesRepository {
@@ -45,38 +43,13 @@ class PlacesRepositoryImpl implements PlacesRepository {
 
       // Update offline cache
       if (places.isNotEmpty) {
-        final companions = places.map((p) => CachedPlacesCompanion.insert(
-          id: p.id,
-          name: p.name,
-          category: p.category,
-          address: p.address,
-          city: p.city,
-          state: p.state,
-          latitude: p.latitude,
-          longitude: p.longitude,
-          overallScore: p.overallScore,
-          totalReviews: p.totalReviews,
-          cachedAt: Value(DateTime.now()),
-        )).toList();
-        await placesDao.cachePlaces(companions);
+        await placesDao.cachePlaces(places);
       }
 
       return places;
     } catch (_) {
-      // Offline fallback: load from Drift local cache
-      final cached = await placesDao.getCachedPlaces();
-      return cached.map((c) => Place(
-        id: c.id,
-        name: c.name,
-        category: c.category,
-        address: c.address,
-        city: c.city,
-        state: c.state,
-        latitude: c.latitude,
-        longitude: c.longitude,
-        overallScore: c.overallScore,
-        totalReviews: c.totalReviews,
-      )).toList();
+      // Offline fallback: load from local cache
+      return await placesDao.getCachedPlaces();
     }
   }
 
@@ -99,22 +72,54 @@ class PlacesRepositoryImpl implements PlacesRepository {
     required double longitude,
     String? googlePlaceId,
   }) async {
+    final payload = <String, dynamic>{
+      'name': name,
+      'category': category,
+      'address': address,
+      'city': city,
+      'state': state,
+      'latitude': latitude,
+      'longitude': longitude,
+    };
+    if (description != null && description.isNotEmpty) payload['description'] = description;
+    if (postalCode != null && postalCode.isNotEmpty) payload['postalCode'] = postalCode;
+    if (googlePlaceId != null && googlePlaceId.isNotEmpty) payload['googlePlaceId'] = googlePlaceId;
+
     final response = await dioClient.dio.post(
       '/api/v1/places',
-      data: {
-        'name': name,
-        'description': description,
-        'category': category,
-        'address': address,
-        'city': city,
-        'state': state,
-        'postalCode': postalCode,
-        'latitude': latitude,
-        'longitude': longitude,
-        'googlePlaceId': googlePlaceId,
-      },
+      data: payload,
     );
     return _mapJsonToPlace(response.data as Map<String, dynamic>);
+  }
+
+  @override
+  Future<List<ExternalPlaceSuggestion>> searchExternalPlaces({
+    String? query,
+    double? latitude,
+    double? longitude,
+  }) async {
+    final response = await dioClient.dio.get(
+      '/api/v1/places/external-search',
+      queryParameters: {
+        if (query != null && query.isNotEmpty) 'query': query,
+        if (latitude != null) 'latitude': latitude,
+        if (longitude != null) 'longitude': longitude,
+      },
+    );
+
+    final list = (response.data as List<dynamic>?) ?? [];
+    return list.map((item) {
+      final json = item as Map<String, dynamic>;
+      return ExternalPlaceSuggestion(
+        googlePlaceId: json['googlePlaceId'] as String,
+        name: json['name'] as String,
+        formattedAddress: json['formattedAddress'] as String,
+        latitude: (json['latitude'] as num).toDouble(),
+        longitude: (json['longitude'] as num).toDouble(),
+        category: json['category'] as String,
+        alreadyImportedId: json['alreadyImportedId'] as String?,
+      );
+    }).toList();
   }
 
   @override
@@ -134,17 +139,46 @@ class PlacesRepositoryImpl implements PlacesRepository {
     required List<Map<String, dynamic>> ratings,
     List<String>? mediaIds,
   }) async {
+    final Map<String, dynamic> body = {
+      'ratings': ratings,
+    };
+    if (generalComment != null && generalComment.trim().isNotEmpty) {
+      body['generalComment'] = generalComment.trim();
+    }
+    if (mediaIds != null && mediaIds.isNotEmpty) {
+      body['mediaIds'] = mediaIds;
+    }
+
     final response = await dioClient.dio.post(
       '/api/v1/places/$placeId/reviews',
-      data: {
-        'generalComment': generalComment,
-        'ratings': ratings,
-        'mediaIds': mediaIds,
-      },
+      data: body,
     );
     // On success, clear any stored draft
     await placesDao.deleteDraft(placeId);
     return _mapJsonToReview(response.data as Map<String, dynamic>);
+  }
+
+  @override
+  Future<String> uploadPhoto({
+    required String placeId,
+    required String altText,
+    required List<int> bytes,
+    required String fileName,
+    String mimeType = 'image/jpeg',
+  }) async {
+    final formData = FormData.fromMap({
+      'placeId': placeId,
+      'altText': altText,
+      'file': MultipartFile.fromBytes(bytes, filename: fileName),
+    });
+
+    final response = await dioClient.dio.post(
+      '/api/v1/media/upload',
+      data: formData,
+      options: Options(contentType: 'multipart/form-data'),
+    );
+
+    return (response.data as Map<String, dynamic>)['id'] as String;
   }
 
   @override
@@ -164,15 +198,7 @@ class PlacesRepositoryImpl implements PlacesRepository {
 
   @override
   Future<Map<String, dynamic>?> getReviewDraft(String placeId) async {
-    final draft = await placesDao.getDraft(placeId);
-    if (draft == null) return null;
-    return {
-      'placeId': draft.placeId,
-      'generalComment': draft.generalComment,
-      'ratings': jsonDecode(draft.ratingsJson) as Map<String, dynamic>,
-      'photos': jsonDecode(draft.photosJson) as List<dynamic>,
-      'updatedAt': draft.updatedAt,
-    };
+    return await placesDao.getDraft(placeId);
   }
 
   @override
@@ -200,6 +226,7 @@ class PlacesRepositoryImpl implements PlacesRepository {
       lastReviewedAt: json['lastReviewedAt'] != null ? DateTime.parse(json['lastReviewedAt'] as String) : null,
       isOutdated: json['isOutdated'] as bool? ?? false,
       distanceMeters: json['distanceMeters'] as int?,
+      source: (json['source'] as String?) ?? (json['googlePlaceId'] != null ? 'GOOGLE_PLACES' : 'COMMUNITY'),
       criteriaBreakdown: criteria.map((c) => PlaceCriterionSummary(
         id: c['id'] as String,
         code: c['code'] as String,

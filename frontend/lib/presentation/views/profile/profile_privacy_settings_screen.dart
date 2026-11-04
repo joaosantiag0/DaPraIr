@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../bloc/profile/profile_bloc.dart';
-import '../../bloc/auth/auth_bloc.dart';
-import '../../../core/accessibility/semantics_helper.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../components/accessible_button.dart';
+import 'account_data_governance_screen.dart';
 
 class ProfilePrivacySettingsScreen extends StatefulWidget {
   final bool isAuthenticated;
@@ -39,43 +38,11 @@ class _ProfilePrivacySettingsScreenState extends State<ProfilePrivacySettingsScr
     }
   }
 
-  void _showAnonymizeConfirmation() {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.warning_amber_rounded, color: AppColors.warningOrange, size: 26),
-            SizedBox(width: 8),
-            Expanded(child: Text('Confirmar Exclusão e Anonimização?')),
-          ],
-        ),
-        content: const Text(
-          'Conforme o Art. 18, VI da LGPD, todos os seus dados pessoais identificáveis (nome, e-mail, perfil de saúde) serão definitivamente apagados ou desvinculados. Suas avaliações públicas serão mantidas com autoria anônima para preservar a utilidade comunitária.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.warningOrange),
-            onPressed: () {
-              Navigator.pop(ctx);
-              context.read<ProfileBloc>().add(AnonymizeAccountEvent());
-            },
-            child: const Text('Anonimizar e Excluir Minha Conta', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     if (!widget.isAuthenticated) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Privacidade e Dados (LGPD)')),
+        appBar: AppBar(title: const Text('Privacidade e Dados')),
         body: Center(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
@@ -96,7 +63,7 @@ class _ProfilePrivacySettingsScreenState extends State<ProfilePrivacySettingsScr
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  'Privacidade e Governança LGPD',
+                  'Privacidade e Dados',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                         fontWeight: FontWeight.bold,
@@ -105,7 +72,7 @@ class _ProfilePrivacySettingsScreenState extends State<ProfilePrivacySettingsScr
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Faça login na sua conta para gerenciar preferências de acessibilidade, portabilidade de dados (Art. 18, V) e exclusão/anonimização permanente.',
+                  'Faça login na sua conta para gerenciar preferências de acessibilidade, exportação de dados e exclusão permanente.',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: AppColors.textSecondary,
@@ -130,31 +97,11 @@ class _ProfilePrivacySettingsScreenState extends State<ProfilePrivacySettingsScr
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Privacidade e Dados (LGPD)')),
+      appBar: AppBar(title: const Text('Privacidade e Dados')),
       body: BlocConsumer<ProfileBloc, ProfileState>(
         listener: (context, state) {
           if (state is ProfileLoaded) {
             _visibility = state.profile.visibility;
-            if (state.anonymizeSuccess) {
-              SemanticsHelper.announce('Sua conta foi anonimizada e seus dados foram apagados.');
-              context.read<AuthBloc>().add(LogoutEvent());
-              Navigator.pop(context);
-            }
-            if (state.exportedData != null) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: const Row(
-                    children: [
-                      Icon(Icons.check_circle, color: Colors.white, size: 20),
-                      SizedBox(width: 8),
-                      Text('Pacote de dados pessoais exportado com sucesso!'),
-                    ],
-                  ),
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-              );
-            }
           }
         },
         builder: (context, state) {
@@ -187,7 +134,7 @@ class _ProfilePrivacySettingsScreenState extends State<ProfilePrivacySettingsScr
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
-                              'Governança & Segurança LGPD',
+                              'Privacidade e Segurança',
                               style: TextStyle(
                                 color: AppColors.primaryBlue,
                                 fontWeight: FontWeight.bold,
@@ -196,7 +143,7 @@ class _ProfilePrivacySettingsScreenState extends State<ProfilePrivacySettingsScr
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              'Seus dados sensíveis são criptografados com padrão militar AES-256.',
+                              'Seus dados pessoais são armazenados com segurança.',
                               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                     color: AppColors.textSecondary,
                                   ),
@@ -244,7 +191,7 @@ class _ProfilePrivacySettingsScreenState extends State<ProfilePrivacySettingsScr
                         children: [
                           Icon(Icons.lock_outline, size: 20, color: AppColors.primaryBlue),
                           SizedBox(width: 10),
-                          Text('Privado (Criptografado AES-256)'),
+                          Text('Apenas Eu (Privado)'),
                         ],
                       ),
                     ),
@@ -286,120 +233,65 @@ class _ProfilePrivacySettingsScreenState extends State<ProfilePrivacySettingsScr
 
                 const SizedBox(height: 28),
                 const Divider(color: AppColors.borderLight),
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
 
-                // Portability Section
+                // Link to second screen (Account & Data Governance)
                 Card(
                   elevation: 0.5,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                     side: const BorderSide(color: AppColors.borderLight, width: 1.2),
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(18),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: AppColors.primaryContainer,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Icon(Icons.file_download_outlined, color: AppColors.primaryBlue, size: 20),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Semantics(
-                                header: true,
-                                child: Text(
-                                  'Portabilidade de Dados (LGPD Art. 18, V)',
-                                  style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Baixe uma cópia estruturada em formato aberto (JSON) de todos os seus dados cadastrais, consentimentos e histórico.',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: AppColors.textSecondary,
-                                height: 1.35,
-                              ),
-                        ),
-                        const SizedBox(height: 16),
-                        AccessibleButton(
-                          label: 'Exportar Meus Dados em JSON',
-                          icon: Icons.download_rounded,
-                          isSecondary: true,
-                          onPressed: () {
-                            context.read<ProfileBloc>().add(ExportDataEvent());
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 18),
-
-                // Right to be forgotten (Danger Zone)
-                Card(
-                  elevation: 0.5,
-                  shape: RoundedRectangleBorder(
+                  child: InkWell(
                     borderRadius: BorderRadius.circular(16),
-                    side: BorderSide(color: AppColors.warningOrange.withOpacity(0.3), width: 1.2),
-                  ),
-                  color: AppColors.warningLight.withOpacity(0.2),
-                  child: Padding(
-                    padding: const EdgeInsets.all(18),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: AppColors.warningLight,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Icon(Icons.delete_forever_rounded, color: AppColors.warningOrange, size: 20),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const AccountDataGovernanceScreen(),
+                        ),
+                      );
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceMuted,
+                              borderRadius: BorderRadius.circular(10),
                             ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Semantics(
-                                header: true,
-                                child: Text(
-                                  'Direito ao Esquecimento (LGPD Art. 18, VI)',
+                            child: const Icon(
+                              Icons.manage_accounts_outlined,
+                              color: AppColors.primaryBlue,
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Gerenciamento de Dados e Conta',
                                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
                                         fontWeight: FontWeight.bold,
-                                        color: AppColors.warningOrange,
                                       ),
                                 ),
-                              ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  'Portabilidade de dados e exclusão de conta',
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                        color: AppColors.textSecondary,
+                                      ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Solicite a exclusão de sua conta e a anonimização permanente de seus dados.',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: AppColors.textSecondary,
-                                height: 1.35,
-                              ),
-                        ),
-                        const SizedBox(height: 16),
-                        AccessibleButton(
-                          label: 'Anonimizar e Excluir Minha Conta',
-                          icon: Icons.delete_forever,
-                          isSecondary: true,
-                          onPressed: _showAnonymizeConfirmation,
-                        ),
-                      ],
+                          ),
+                          const Icon(Icons.chevron_right, color: AppColors.textHint),
+                        ],
+                      ),
                     ),
                   ),
                 ),

@@ -151,6 +151,50 @@ export class UsersService {
         : null,
     };
   }
+
+  async updateUserLocation(userId: string, locationData: {
+    label: string;
+    address?: string | null;
+    city?: string | null;
+    state?: string | null;
+    latitude: number;
+    longitude: number;
+    isGps?: boolean;
+  }) {
+    const encrypted = CryptoService.encryptPayload({
+      ...locationData,
+      updatedAt: new Date().toISOString(),
+    });
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { encrypted_location: encrypted },
+    });
+
+    return {
+      success: true,
+      message: 'Localização salva com criptografia AES-256',
+      location: locationData,
+    };
+  }
+
+  async getUserLocation(userId: string) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { encrypted_location: true },
+    });
+
+    if (!user || !user.encrypted_location) {
+      return null;
+    }
+
+    try {
+      const decrypted = CryptoService.decryptPayload<any>(Buffer.from(user.encrypted_location));
+      return decrypted;
+    } catch {
+      return null;
+    }
+  }
 }
 
 export const usersService = new UsersService();

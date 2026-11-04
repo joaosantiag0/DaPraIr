@@ -1,4 +1,4 @@
-import 'package:equatable/equatable.dart';
+import 'package:frontend/core/base/equatable.dart';
 
 class AccessibilityProfile extends Equatable {
   final String userId;

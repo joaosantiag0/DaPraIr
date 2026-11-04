@@ -1,5 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:equatable/equatable.dart';
+import 'package:frontend/core/base/equatable.dart';
 import '../../../domain/entities/place.dart';
 import '../../../domain/repositories/places_repository.dart';
 
@@ -45,6 +45,7 @@ class CreatePlaceEvent extends PlacesEvent {
   final String address;
   final String city;
   final String state;
+  final String? postalCode;
   final double latitude;
   final double longitude;
   final String? googlePlaceId;
@@ -56,13 +57,14 @@ class CreatePlaceEvent extends PlacesEvent {
     required this.address,
     required this.city,
     required this.state,
+    this.postalCode,
     required this.latitude,
     required this.longitude,
     this.googlePlaceId,
   });
 
   @override
-  List<Object?> get props => [name, category, address, latitude, longitude];
+  List<Object?> get props => [name, category, address, latitude, longitude, postalCode];
 }
 
 // States
@@ -159,6 +161,7 @@ class PlacesBloc extends Bloc<PlacesEvent, PlacesState> {
         address: event.address,
         city: event.city,
         state: event.state,
+        postalCode: event.postalCode,
         latitude: event.latitude,
         longitude: event.longitude,
         googlePlaceId: event.googlePlaceId,

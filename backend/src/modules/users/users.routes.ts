@@ -10,6 +10,16 @@ const updateProfileSchema = z.object({
   consentGranted: z.boolean(),
 });
 
+const updateLocationSchema = z.object({
+  label: z.string(),
+  address: z.string().nullable().optional(),
+  city: z.string().nullable().optional(),
+  state: z.string().nullable().optional(),
+  latitude: z.number(),
+  longitude: z.number(),
+  isGps: z.boolean().optional(),
+});
+
 export async function usersRoutes(app: FastifyInstance) {
   // Get authenticated user's accessibility profile
   app.get(
@@ -37,6 +47,27 @@ export async function usersRoutes(app: FastifyInstance) {
         userAgent: request.headers['user-agent'],
       });
       return reply.status(200).send(profile);
+    }
+  );
+
+  // Get encrypted user location
+  app.get(
+    '/users/me/location',
+    { preHandler: [app.authenticate] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const location = await usersService.getUserLocation(request.user.id);
+      return reply.status(200).send(location);
+    }
+  );
+
+  // Update encrypted user location
+  app.put(
+    '/users/me/location',
+    { preHandler: [app.authenticate] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const body = updateLocationSchema.parse(request.body);
+      const result = await usersService.updateUserLocation(request.user.id, body);
+      return reply.status(200).send(result);
     }
   );
 

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../bloc/auth/auth_bloc.dart';
 import '../../bloc/places/places_bloc.dart';
 import '../../bloc/reviews/reviews_bloc.dart';
+import '../auth/login_screen.dart';
 import '../../../domain/entities/place.dart';
 import '../../../core/accessibility/semantics_helper.dart';
 import '../../../core/navigation/external_navigation_launcher.dart';
@@ -30,6 +32,14 @@ class PlaceDetailScreen extends StatefulWidget {
 }
 
 class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
+  bool get _isAuthenticated {
+    try {
+      final authState = context.read<AuthBloc>().state;
+      if (authState is Authenticated) return true;
+    } catch (_) {}
+    return widget.isAuthenticated;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -69,6 +79,63 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
     if (score >= 4.0) return AppColors.successGreen;
     if (score >= 2.5) return AppColors.starGold;
     return AppColors.warningOrange;
+  }
+
+  void _openFullScreenImage(BuildContext context, String imageUrl, String altText) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.black.withOpacity(0.92),
+        insetPadding: const EdgeInsets.all(12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Stack(
+          alignment: Alignment.topRight,
+          children: [
+            Center(
+              child: InteractiveViewer(
+                panEnabled: true,
+                minScale: 0.8,
+                maxScale: 4.0,
+                child: Image.network(
+                  imageUrl,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => const Center(
+                    child: Icon(Icons.broken_image_rounded, color: Colors.white70, size: 48),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                tooltip: 'Fechar imagem ampliada',
+                onPressed: () => Navigator.of(ctx).pop(),
+              ),
+            ),
+            if (altText.isNotEmpty)
+              Positioned(
+                bottom: 12,
+                left: 12,
+                right: 12,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.75),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    altText,
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -170,29 +237,38 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                         decoration: BoxDecoration(
-                          color: AppColors.primaryBlue,
+                          color: place.totalReviews > 0 ? AppColors.primaryBlue : AppColors.primaryContainer,
                           borderRadius: BorderRadius.circular(14),
+                          border: place.totalReviews == 0 ? Border.all(color: AppColors.primaryBlue.withOpacity(0.3)) : null,
                         ),
                         child: Column(
                           children: [
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(Icons.star_rounded, color: Colors.amber, size: 24),
+                                Icon(
+                                  place.totalReviews > 0 ? Icons.star_rounded : Icons.travel_explore_rounded,
+                                  color: place.totalReviews > 0 ? Colors.amber : AppColors.primaryBlue,
+                                  size: 24,
+                                ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  place.overallScore.toStringAsFixed(1),
-                                  style: const TextStyle(
-                                    color: Colors.white,
+                                  place.totalReviews > 0 ? place.overallScore.toStringAsFixed(1) : 'Novo',
+                                  style: TextStyle(
+                                    color: place.totalReviews > 0 ? Colors.white : AppColors.primaryBlue,
                                     fontWeight: FontWeight.bold,
-                                    fontSize: 22,
+                                    fontSize: place.totalReviews > 0 ? 22 : 18,
                                   ),
                                 ),
                               ],
                             ),
-                            const Text(
-                              'de 5.0',
-                              style: TextStyle(color: Colors.white70, fontSize: 11),
+                            Text(
+                              place.totalReviews > 0 ? 'de 5.0' : 'Novo Local',
+                              style: TextStyle(
+                                color: place.totalReviews > 0 ? Colors.white70 : AppColors.primaryBlue.withOpacity(0.8),
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ],
                         ),
@@ -203,7 +279,7 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              _getQualityLabel(place.overallScore),
+                              place.totalReviews > 0 ? _getQualityLabel(place.overallScore) : 'Aguardando 1ª Avaliação',
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 15,
@@ -211,7 +287,9 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              '${place.totalReviews} ${place.totalReviews == 1 ? "avaliação da comunidade" : "avaliações da comunidade"}',
+                              place.totalReviews > 0
+                                  ? '${place.totalReviews} ${place.totalReviews == 1 ? "avaliação da comunidade" : "avaliações da comunidade"}'
+                                  : 'Novo estabelecimento • Seja o primeiro a avaliar a acessibilidade deste local!',
                               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                     color: AppColors.textHint,
                                   ),
@@ -294,11 +372,23 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
                         icon: Icons.rate_review_rounded,
                         isSecondary: true,
                         onPressed: () {
-                          if (!widget.isAuthenticated) {
+                          if (!_isAuthenticated) {
                             GuestActionDialog.show(
                               context: context,
                               actionTitle: 'avaliar as condições deste local',
-                              onLoginPressed: widget.onNavigateToLogin ?? () {},
+                              onLoginPressed: () async {
+                                final loggedIn = await Navigator.of(context).push<bool>(
+                                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                                );
+                                if (context.mounted && (loggedIn == true || _isAuthenticated)) {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => SubmitReviewScreen(placeId: place.id),
+                                    ),
+                                  );
+                                }
+                              },
                             );
                           } else {
                             Navigator.push(
@@ -511,35 +601,118 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
                                   ],
                                   if (rev.media.isNotEmpty) ...[
                                     const SizedBox(height: 12),
-                                    ...rev.media.map((m) => Semantics(
-                                          image: true,
-                                          label: 'Foto: ${m.altText}',
-                                          child: Container(
-                                            margin: const EdgeInsets.only(top: 6),
-                                            padding: const EdgeInsets.all(10),
-                                            decoration: BoxDecoration(
-                                              color: AppColors.primaryContainer.withOpacity(0.5),
-                                              borderRadius: BorderRadius.circular(10),
-                                              border: Border.all(color: AppColors.borderLight),
-                                            ),
-                                            child: Row(
+                                    ...rev.media.map((m) {
+                                      final targetUrl = m.mediaUrl.isNotEmpty ? m.mediaUrl : (m.thumbnailUrl ?? '');
+                                      return Semantics(
+                                        image: true,
+                                        label: 'Foto do local: ${m.altText}. Toque para ampliar.',
+                                        child: Container(
+                                          margin: const EdgeInsets.only(top: 8),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.surfaceMuted,
+                                            borderRadius: BorderRadius.circular(12),
+                                            border: Border.all(color: AppColors.borderLight),
+                                          ),
+                                          clipBehavior: Clip.antiAlias,
+                                          child: InkWell(
+                                            onTap: targetUrl.isNotEmpty
+                                                ? () => _openFullScreenImage(context, targetUrl, m.altText)
+                                                : null,
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.stretch,
                                               children: [
-                                                const Icon(Icons.photo_camera_rounded, size: 22, color: AppColors.primaryBlue),
-                                                const SizedBox(width: 10),
-                                                Expanded(
-                                                  child: Text(
-                                                    'Foto: ${m.altText}',
-                                                    style: const TextStyle(
-                                                      fontSize: 13,
-                                                      fontStyle: FontStyle.italic,
-                                                      color: AppColors.textPrimary,
-                                                    ),
+                                                if (targetUrl.isNotEmpty &&
+                                                    (targetUrl.startsWith('http') || targetUrl.startsWith('blob:')))
+                                                  Stack(
+                                                    children: [
+                                                      Container(
+                                                        width: double.infinity,
+                                                        constraints: const BoxConstraints(
+                                                          minHeight: 140,
+                                                          maxHeight: 340,
+                                                        ),
+                                                        color: Colors.black.withOpacity(0.04),
+                                                        alignment: Alignment.center,
+                                                        child: Image.network(
+                                                          targetUrl,
+                                                          fit: BoxFit.contain,
+                                                          width: double.infinity,
+                                                          errorBuilder: (context, error, stackTrace) => Container(
+                                                            height: 100,
+                                                            color: AppColors.surfaceMuted,
+                                                            child: const Center(
+                                                              child: Column(
+                                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                                children: [
+                                                                  Icon(Icons.broken_image_rounded,
+                                                                      color: AppColors.textSecondary, size: 28),
+                                                                  SizedBox(height: 4),
+                                                                  Text(
+                                                                    'Imagem não pôde ser carregada',
+                                                                    style: TextStyle(
+                                                                        fontSize: 12, color: AppColors.textSecondary),
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                      Positioned(
+                                                        top: 8,
+                                                        right: 8,
+                                                        child: Container(
+                                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                          decoration: BoxDecoration(
+                                                            color: Colors.black.withOpacity(0.65),
+                                                            borderRadius: BorderRadius.circular(20),
+                                                          ),
+                                                          child: const Row(
+                                                            mainAxisSize: MainAxisSize.min,
+                                                            children: [
+                                                              Icon(Icons.zoom_in, color: Colors.white, size: 14),
+                                                              SizedBox(width: 4),
+                                                              Text(
+                                                                'Ampliar',
+                                                                style: TextStyle(
+                                                                  color: Colors.white,
+                                                                  fontSize: 11,
+                                                                  fontWeight: FontWeight.bold,
+                                                                ),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                Padding(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                                  child: Row(
+                                                    children: [
+                                                      const Icon(Icons.photo_camera_rounded,
+                                                          size: 18, color: AppColors.primaryBlue),
+                                                      const SizedBox(width: 8),
+                                                      Expanded(
+                                                        child: Text(
+                                                          'Audiodescrição: ${m.altText}',
+                                                          style: const TextStyle(
+                                                            fontSize: 12,
+                                                            fontStyle: FontStyle.italic,
+                                                            color: AppColors.textPrimary,
+                                                            fontWeight: FontWeight.w500,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ],
                                                   ),
                                                 ),
                                               ],
                                             ),
                                           ),
-                                        )),
+                                        ),
+                                      );
+                                    }),
                                   ],
                                 ],
                               ),

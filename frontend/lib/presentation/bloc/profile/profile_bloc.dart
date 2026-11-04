@@ -1,5 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:equatable/equatable.dart';
+import 'package:frontend/core/base/equatable.dart';
 import '../../../domain/entities/accessibility_profile.dart';
 import '../../../domain/repositories/user_repository.dart';
 

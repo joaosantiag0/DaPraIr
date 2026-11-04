@@ -124,7 +124,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     Expanded(
                       child: Text(
-                        'Concordo com os Termos de Uso e Política de Privacidade de Dados (LGPD)',
+                        'Concordo com os Termos de Uso e a Política de Privacidade',
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                     ),

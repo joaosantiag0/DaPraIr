@@ -1,4 +1,4 @@
-import 'package:equatable/equatable.dart';
+import 'package:frontend/core/base/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../domain/entities/event.dart';
 import '../../../domain/repositories/events_repository.dart';

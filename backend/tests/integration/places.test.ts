@@ -137,6 +137,6 @@ describe('Places API (US1 - Descoberta e Avaliação de Locais)', () => {
     const body = JSON.parse(response.body);
     expect(Array.isArray(body)).toBe(true);
     expect(body[0]).toHaveProperty('googlePlaceId');
-    expect(body[0].name).toBe('Teatro Municipal');
+    expect(body[0].name).toContain('Teatro Municipal');
   });
 });

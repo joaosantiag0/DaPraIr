@@ -4,6 +4,8 @@ import fastifyMultipart from '@fastify/multipart';
 import fastifySwagger from '@fastify/swagger';
 import fastifySwaggerUi from '@fastify/swagger-ui';
 import fastifyWebsocket from '@fastify/websocket';
+import fs from 'node:fs';
+import path from 'node:path';
 import { config } from './config.js';
 import { sensiblePlugin } from './core/plugins/sensible.js';
 import { jwtPlugin } from './core/plugins/jwt.js';
@@ -85,6 +87,26 @@ export async function buildApp(): Promise<FastifyInstance> {
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
     };
+  });
+
+  // Serve static uploaded media
+  app.get('/uploads/*', async (request, reply) => {
+    const rawPath = (request.params as any)['*'] || '';
+    const safePath = path.normalize(rawPath).replace(/^(\.\.[\/\\])+/, '');
+    const fullPath = path.resolve(process.cwd(), 'uploads', safePath);
+    if (!fs.existsSync(fullPath)) {
+      return reply.status(404).send({ message: 'Arquivo não encontrado' });
+    }
+    const ext = path.extname(fullPath).toLowerCase();
+    const mimeMap: Record<string, string> = {
+      '.webp': 'image/webp',
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.png': 'image/png',
+    };
+    reply.header('Content-Type', mimeMap[ext] || 'application/octet-stream');
+    reply.header('Cache-Control', 'public, max-age=31536000, immutable');
+    return reply.send(fs.createReadStream(fullPath));
   });
 
   // API Routes (prefix: /api/v1)

@@ -148,7 +148,7 @@ class _OnboardingAccessibilityScreenState extends State<OnboardingAccessibilityS
                 contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               ),
               items: const [
-                DropdownMenuItem(value: 'PRIVATE', child: Text('Apenas Eu (Privado - Criptografado)')),
+                DropdownMenuItem(value: 'PRIVATE', child: Text('Apenas Eu (Privado)')),
                 DropdownMenuItem(value: 'FRIENDS_ONLY', child: Text('Apenas Amigos Aceitos')),
                 DropdownMenuItem(value: 'PUBLIC', child: Text('Toda a Comunidade (Público)')),
               ],
@@ -157,7 +157,7 @@ class _OnboardingAccessibilityScreenState extends State<OnboardingAccessibilityS
 
             const SizedBox(height: 20),
 
-            // Explicit LGPD Consent
+            // Consent Container
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -171,10 +171,10 @@ class _OnboardingAccessibilityScreenState extends State<OnboardingAccessibilityS
                     value: _consentGranted,
                     onChanged: (val) => setState(() => _consentGranted = val ?? false),
                   ),
-                  Expanded(
+                  const Expanded(
                     child: Text(
-                      'Autorizo expressamente o tratamento dos dados de saúde/acessibilidade declarados para fins de personalização na plataforma DáPraIr? (LGPD Art. 5, II).',
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                      'Autorizo o uso das minhas preferências de acessibilidade para personalizar as recomendações no DáPraIr.',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                     ),
                   ),
                 ],

@@ -28,6 +28,12 @@ abstract class PlacesRepository {
     String? googlePlaceId,
   });
 
+  Future<List<ExternalPlaceSuggestion>> searchExternalPlaces({
+    String? query,
+    double? latitude,
+    double? longitude,
+  });
+
   Future<List<Review>> getPlaceReviews(String placeId, {int limit = 10, int offset = 0});
 
   Future<Review> submitReview({
@@ -35,6 +41,14 @@ abstract class PlacesRepository {
     String? generalComment,
     required List<Map<String, dynamic>> ratings,
     List<String>? mediaIds,
+  });
+
+  Future<String> uploadPhoto({
+    required String placeId,
+    required String altText,
+    required List<int> bytes,
+    required String fileName,
+    String mimeType = 'image/jpeg',
   });
 
   Future<void> saveReviewDraft({

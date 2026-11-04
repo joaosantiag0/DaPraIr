@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:equatable/equatable.dart';
+import 'package:frontend/core/base/equatable.dart';
 import '../../../domain/entities/chat_message.dart';
 import '../../../domain/repositories/chat_repository.dart';
 

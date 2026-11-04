@@ -1,10 +1,15 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:image_picker/image_picker.dart';
+import '../../bloc/auth/auth_bloc.dart';
 import '../../bloc/reviews/reviews_bloc.dart';
 import '../../../core/accessibility/semantics_helper.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../components/accessible_button.dart';
 import '../../components/accessible_text_field.dart';
+import '../../components/guest_action_dialog.dart';
+import '../auth/login_screen.dart';
 
 class SubmitReviewScreen extends StatefulWidget {
   final String placeId;
@@ -41,6 +46,8 @@ class _SubmitReviewScreenState extends State<SubmitReviewScreen> {
 
   bool _isSavingDraft = false;
   bool _hasPhotoAttached = false;
+  XFile? _selectedPhoto;
+  Uint8List? _photoBytes;
 
   @override
   void initState() {
@@ -72,13 +79,92 @@ class _SubmitReviewScreenState extends State<SubmitReviewScreen> {
     }
   }
 
+  Future<void> _showPhotoSourceDialog() async {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.camera_alt_rounded, color: AppColors.primaryBlue),
+                title: const Text('Tirar Foto com a Câmera'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickImage(ImageSource.camera);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library_rounded, color: AppColors.primaryBlue),
+                title: const Text('Escolher da Galeria'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickImage(ImageSource.gallery);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final picker = ImagePicker();
+      final photo = await picker.pickImage(
+        source: source,
+        maxWidth: 1920,
+        maxHeight: 1080,
+        imageQuality: 85,
+      );
+      if (photo != null) {
+        final bytes = await photo.readAsBytes();
+        setState(() {
+          _selectedPhoto = photo;
+          _photoBytes = bytes;
+          _hasPhotoAttached = true;
+        });
+        SemanticsHelper.announce('Foto selecionada com sucesso');
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Não foi possível carregar a imagem: $e')),
+      );
+    }
+  }
+
+  void _removePhoto() {
+    setState(() {
+      _selectedPhoto = null;
+      _photoBytes = null;
+      _hasPhotoAttached = false;
+      _altTextController.clear();
+    });
+    SemanticsHelper.announce('Foto removida');
+  }
+
   void _saveDraft() {
     setState(() => _isSavingDraft = true);
+    final List<Map<String, String>> photos = [];
+    if (_hasPhotoAttached && _altTextController.text.isNotEmpty) {
+      photos.add({
+        'altText': _altTextController.text.trim(),
+        'name': _selectedPhoto?.name ?? 'foto.jpg',
+      });
+    }
+
     context.read<ReviewsBloc>().add(
           SaveReviewDraftEvent(
             placeId: widget.placeId,
             generalComment: _commentController.text,
             ratings: _ratings,
+            photos: photos,
           ),
         );
     SemanticsHelper.announce('Rascunho de avaliação salvo no dispositivo');
@@ -99,6 +185,27 @@ class _SubmitReviewScreenState extends State<SubmitReviewScreen> {
   }
 
   void _submitReview() {
+    try {
+      final authBloc = BlocProvider.of<AuthBloc>(context);
+      if (authBloc.state is! Authenticated) {
+        GuestActionDialog.show(
+          context: context,
+          actionTitle: 'publicar uma avaliação',
+          onLoginPressed: () async {
+            final loggedIn = await Navigator.of(context).push<bool>(
+              MaterialPageRoute(builder: (_) => const LoginScreen()),
+            );
+            if (context.mounted && (loggedIn == true || authBloc.state is Authenticated)) {
+              _submitReview();
+            }
+          },
+        );
+        return;
+      }
+    } catch (_) {
+      // AuthBloc not provided in context (e.g. isolated test)
+    }
+
     if (_hasPhotoAttached && _altTextController.text.trim().length < 5) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -130,6 +237,9 @@ class _SubmitReviewScreenState extends State<SubmitReviewScreen> {
             placeId: widget.placeId,
             generalComment: _commentController.text.trim(),
             ratings: ratingsList,
+            photoBytes: _photoBytes,
+            photoAltText: _hasPhotoAttached ? _altTextController.text.trim() : null,
+            photoFileName: _selectedPhoto?.name,
           ),
         );
   }
@@ -172,6 +282,25 @@ class _SubmitReviewScreenState extends State<SubmitReviewScreen> {
             );
             Navigator.pop(context);
           }
+          if (state is ReviewsError) {
+            SemanticsHelper.announce('Erro ao publicar avaliação: ${state.message}');
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                backgroundColor: AppColors.warningOrange,
+                content: Row(
+                  children: [
+                    const Icon(Icons.error_outline, color: Colors.white, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text('Erro ao publicar avaliação: ${state.message}'),
+                    ),
+                  ],
+                ),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            );
+          }
           if (state is ReviewsLoaded && state.draft != null) {
             final draft = state.draft!;
             if (draft['generalComment'] != null && _commentController.text.isEmpty) {
@@ -186,6 +315,13 @@ class _SubmitReviewScreenState extends State<SubmitReviewScreen> {
                   }
                 });
               });
+            }
+            if (draft['photos'] is List && (draft['photos'] as List).isNotEmpty) {
+              final photoInfo = (draft['photos'] as List).first;
+              if (photoInfo is Map && photoInfo['altText'] != null && _altTextController.text.isEmpty) {
+                _altTextController.text = photoInfo['altText'] as String;
+                _hasPhotoAttached = true;
+              }
             }
           }
         },
@@ -374,43 +510,94 @@ class _SubmitReviewScreenState extends State<SubmitReviewScreen> {
               ),
               const SizedBox(height: 10),
 
-              // Photo Upload Box
-              InkWell(
-                onTap: () {
-                  setState(() => _hasPhotoAttached = !_hasPhotoAttached);
-                },
-                borderRadius: BorderRadius.circular(14),
-                child: Container(
-                  padding: const EdgeInsets.all(16),
+              // Photo Upload & Preview Section
+              if (_photoBytes != null) ...[
+                Container(
                   decoration: BoxDecoration(
-                    color: _hasPhotoAttached ? AppColors.successLight.withOpacity(0.4) : AppColors.surfaceMuted,
+                    color: AppColors.surfaceMuted,
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: _hasPhotoAttached ? AppColors.successGreen : AppColors.borderLight,
-                      width: 1.5,
-                    ),
+                    border: Border.all(color: AppColors.primaryBlue.withOpacity(0.3), width: 1.5),
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  clipBehavior: Clip.antiAlias,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Icon(
-                        _hasPhotoAttached ? Icons.check_circle_rounded : Icons.add_a_photo_rounded,
-                        color: _hasPhotoAttached ? AppColors.successGreen : AppColors.primaryBlue,
-                        size: 24,
+                      Container(
+                        constraints: const BoxConstraints(minHeight: 120, maxHeight: 300),
+                        width: double.infinity,
+                        color: Colors.black.withOpacity(0.04),
+                        alignment: Alignment.center,
+                        child: Image.memory(
+                          _photoBytes!,
+                          fit: BoxFit.contain,
+                        ),
                       ),
-                      const SizedBox(width: 10),
-                      Text(
-                        _hasPhotoAttached ? 'Foto Anexada ✓ (Toque para remover)' : 'Anexar Foto do Local',
-                        style: TextStyle(
-                          color: _hasPhotoAttached ? AppColors.successGreen : AppColors.primaryBlue,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.check_circle_rounded, color: AppColors.successGreen, size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                _selectedPhoto?.name ?? 'Foto selecionada',
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            TextButton.icon(
+                              onPressed: _showPhotoSourceDialog,
+                              icon: const Icon(Icons.swap_horiz, size: 16),
+                              label: const Text('Trocar', style: TextStyle(fontSize: 12)),
+                            ),
+                            IconButton(
+                              onPressed: _removePhoto,
+                              icon: const Icon(Icons.delete_outline_rounded, color: AppColors.warningOrange, size: 20),
+                              tooltip: 'Remover foto',
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
                 ),
-              ),
+              ] else ...[
+                InkWell(
+                  onTap: _showPhotoSourceDialog,
+                  borderRadius: BorderRadius.circular(14),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceMuted,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: AppColors.borderLight,
+                        width: 1.5,
+                      ),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.add_a_photo_rounded,
+                          color: AppColors.primaryBlue,
+                          size: 24,
+                        ),
+                        SizedBox(width: 10),
+                        Text(
+                          'Anexar Foto do Local',
+                          style: TextStyle(
+                            color: AppColors.primaryBlue,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
 
               if (_hasPhotoAttached) ...[
                 const SizedBox(height: 14),

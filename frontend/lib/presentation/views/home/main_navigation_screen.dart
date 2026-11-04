@@ -98,7 +98,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                   icon: Icon(Icons.person_outline),
                   selectedIcon: Icon(Icons.person),
                   label: 'Perfil',
-                  tooltip: 'Configurações de privacidade LGPD e perfil',
+                  tooltip: 'Perfil e configurações',
                 ),
               ],
             ),

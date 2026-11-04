@@ -1,4 +1,4 @@
-import 'package:equatable/equatable.dart';
+import 'package:frontend/core/base/equatable.dart';
 
 class PlaceCriterionSummary extends Equatable {
   final String id;
@@ -54,6 +54,7 @@ class Place extends Equatable {
   final DateTime? lastReviewedAt;
   final bool isOutdated;
   final int? distanceMeters;
+  final String source;
   final List<PlaceCriterionSummary> criteriaBreakdown;
   final List<PlaceMediaItem> media;
 
@@ -73,6 +74,7 @@ class Place extends Equatable {
     this.lastReviewedAt,
     this.isOutdated = false,
     this.distanceMeters,
+    this.source = 'COMMUNITY',
     this.criteriaBreakdown = const [],
     this.media = const [],
   });
@@ -88,5 +90,36 @@ class Place extends Equatable {
         overallScore,
         totalReviews,
         isOutdated,
+      ];
+}
+
+class ExternalPlaceSuggestion extends Equatable {
+  final String googlePlaceId;
+  final String name;
+  final String formattedAddress;
+  final double latitude;
+  final double longitude;
+  final String category;
+  final String? alreadyImportedId;
+
+  const ExternalPlaceSuggestion({
+    required this.googlePlaceId,
+    required this.name,
+    required this.formattedAddress,
+    required this.latitude,
+    required this.longitude,
+    required this.category,
+    this.alreadyImportedId,
+  });
+
+  @override
+  List<Object?> get props => [
+        googlePlaceId,
+        name,
+        formattedAddress,
+        latitude,
+        longitude,
+        category,
+        alreadyImportedId,
       ];
 }

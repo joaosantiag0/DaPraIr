@@ -39,7 +39,7 @@ class _LoginScreenState extends State<LoginScreen> {
         listener: (context, state) {
           if (state is Authenticated) {
             SemanticsHelper.announce('Login realizado com sucesso. Bem-vindo ${state.user.name}');
-            Navigator.pop(context);
+            Navigator.pop(context, true);
           }
           if (state is AuthError) {
             ScaffoldMessenger.of(context).showSnackBar(

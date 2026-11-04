@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import { NotFoundError, BadRequestError } from '../../core/errors/app-error.js';
 import { Client } from '@googlemaps/google-maps-services-js';
 import { config } from '../../config.js';
+import { googleQuotaService } from './google-quota.service.js';
 
 export interface SearchPlacesParams {
   latitude: number;
@@ -73,9 +74,14 @@ export class PlacesService {
   ): Promise<{ targetLat?: number; targetLng?: number } | null> {
     if (!config.GOOGLE_PLACES_API_KEY) return null;
 
+    // Check quota before initiating any Google Places API calls
+    if (!googleQuotaService.canMakeRequest()) {
+      return null;
+    }
+
     try {
       if (query && query.trim().length > 0) {
-        const externalItems = await this.searchExternalPlaces(query.trim());
+        const externalItems = await this.searchExternalPlaces(query.trim(), latitude, longitude);
         if (externalItems && externalItems.length > 0) {
           for (const item of externalItems) {
             const existing = await prisma.place.findUnique({
@@ -107,6 +113,15 @@ export class PlacesService {
           };
         }
       } else {
+        // If checking purely nearby coordinates without a query:
+        // 1. Verify 7-day geo-cache
+        if (googleQuotaService.isAreaSyncedRecently(latitude, longitude)) {
+          return { targetLat: latitude, targetLng: longitude };
+        }
+
+        googleQuotaService.recordRequest('placesNearby_sync');
+        googleQuotaService.markAreaSynced(latitude, longitude);
+
         const response = await this.googleMapsClient.placesNearby({
           params: {
             location: { lat: latitude, lng: longitude },
@@ -175,11 +190,45 @@ export class PlacesService {
     let targetLat: number | undefined;
     let targetLng: number | undefined;
 
+    // Database-First: only call Google Places sync if local DB lacks places and quota allows
     if (offset === 0 && requiredCriteria.length === 0 && config.GOOGLE_PLACES_API_KEY) {
-      const syncResult = await this.syncGooglePlacesNearby(latitude, longitude, radiusMeters, query, category);
-      if (syncResult) {
-        targetLat = syncResult.targetLat;
-        targetLng = syncResult.targetLng;
+      let shouldSync = false;
+
+      if (query && query.trim().length > 0) {
+        // If user searched for a query, check if local database already has matches
+        const localMatchCount = await prisma.place.count({
+          where: {
+            OR: [
+              { name: { contains: query.trim(), mode: 'insensitive' } },
+              { address: { contains: query.trim(), mode: 'insensitive' } },
+              { city: { contains: query.trim(), mode: 'insensitive' } },
+            ],
+          },
+        });
+        // If fewer than 2 matches and quota is available, sync
+        if (localMatchCount < 2 && googleQuotaService.canMakeRequest()) {
+          shouldSync = true;
+        }
+      } else if (googleQuotaService.isAutoSyncEnabled) {
+        // Passive sync of coordinates: only if enabled in config and area not recently synced
+        if (!googleQuotaService.isAreaSyncedRecently(latitude, longitude) && googleQuotaService.canMakeRequest()) {
+          const nearbyCount = await prisma.$queryRaw<[{ count: bigint }]>`
+            SELECT count(*)::bigint FROM places p
+            WHERE ST_DistanceSphere(ST_MakePoint(p.longitude, p.latitude), ST_MakePoint(${longitude}, ${latitude})) <= ${radiusMeters}
+          `;
+          const count = Number(nearbyCount[0]?.count ?? 0);
+          if (count < 3) {
+            shouldSync = true;
+          }
+        }
+      }
+
+      if (shouldSync) {
+        const syncResult = await this.syncGooglePlacesNearby(latitude, longitude, radiusMeters, query, category);
+        if (syncResult) {
+          targetLat = syncResult.targetLat;
+          targetLng = syncResult.targetLng;
+        }
       }
     }
 
@@ -366,11 +415,19 @@ export class PlacesService {
   }
 
   /**
-   * External search using Google Places (with local fallback for dev/test)
+   * External search using Google Places with 24h caching and daily quota guards
    */
   async searchExternalPlaces(query?: string, latitude?: number, longitude?: number) {
     if (!query && (latitude === undefined || longitude === undefined)) {
       throw new BadRequestError('Query ou coordenadas obrigatórias para busca externa');
+    }
+
+    const cleanQuery = query?.trim() || '';
+
+    // 1. Check 24-hour cache first (0 API requests consumed)
+    const cached = googleQuotaService.getCachedSearchResults<any[]>(cleanQuery, latitude, longitude);
+    if (cached) {
+      return cached;
     }
 
     const imported = await prisma.place.findMany({
@@ -381,12 +438,14 @@ export class PlacesService {
     });
     const importedMap = new Map(imported.map((p) => [p.google_place_id, p.id]));
 
-    if (config.GOOGLE_PLACES_API_KEY) {
+    // 2. Call Google Places only if key is configured and daily quota is not exceeded
+    if (config.GOOGLE_PLACES_API_KEY && googleQuotaService.canMakeRequest()) {
       try {
         let results: any[] = [];
-        if (query && query.trim().length > 0) {
+        if (cleanQuery.length > 0) {
+          googleQuotaService.recordRequest('textSearch');
           const params: any = {
-            query: query.trim(),
+            query: cleanQuery,
             key: config.GOOGLE_PLACES_API_KEY,
             language: 'pt-BR',
           };
@@ -398,15 +457,16 @@ export class PlacesService {
           results = response.data.results || [];
 
           // Se a busca retornou um endereço residencial/comercial ou poucos resultados,
-          // busca automaticamente os estabelecimentos comerciais e públicos ao redor desse endereço
+          // busca estabelecimentos ao redor somente se ainda houver cota disponível
           if (results.length > 0) {
             const first = results[0];
             const isAddress = first.types?.some((t: string) =>
               ['street_address', 'route', 'premise', 'subpremise', 'geocode', 'postal_code', 'intersection'].includes(t)
             ) || results.length <= 4;
 
-            if (isAddress && first.geometry?.location) {
+            if (isAddress && first.geometry?.location && googleQuotaService.canMakeRequest()) {
               try {
+                googleQuotaService.recordRequest('placesNearby_address');
                 const nearbyResponse = await this.googleMapsClient.placesNearby({
                   params: {
                     location: first.geometry.location,
@@ -430,6 +490,7 @@ export class PlacesService {
             }
           }
         } else if (latitude !== undefined && longitude !== undefined) {
+          googleQuotaService.recordRequest('placesNearby');
           const response = await this.googleMapsClient.placesNearby({
             params: {
               location: { lat: Number(latitude), lng: Number(longitude) },
@@ -449,7 +510,7 @@ export class PlacesService {
             }
           }
 
-          return Array.from(uniquePlaces.values()).slice(0, 20).map((item) => ({
+          const formattedResults = Array.from(uniquePlaces.values()).slice(0, 20).map((item) => ({
             googlePlaceId: item.place_id,
             name: item.name,
             formattedAddress: item.formatted_address || item.vicinity || `${item.name}, São Paulo, SP`,
@@ -458,13 +519,44 @@ export class PlacesService {
             category: this.mapGoogleCategory(item.types),
             alreadyImportedId: item.place_id ? importedMap.get(item.place_id) ?? null : null,
           }));
+
+          // Cache results for 24h
+          googleQuotaService.cacheSearchResults(cleanQuery, formattedResults, latitude, longitude);
+
+          return formattedResults;
         }
       } catch (err: any) {
         console.warn('Google Places external search fallback:', err?.message);
       }
     }
 
-    const fallbackQuery = query || 'Local Próximo';
+    // 3. Quota reached, key missing or Google error -> Fallback to local DB matches
+    if (cleanQuery.length > 0) {
+      const localMatches = await prisma.place.findMany({
+        where: {
+          OR: [
+            { name: { contains: cleanQuery, mode: 'insensitive' } },
+            { address: { contains: cleanQuery, mode: 'insensitive' } },
+            { city: { contains: cleanQuery, mode: 'insensitive' } },
+          ],
+        },
+        take: 10,
+      });
+
+      if (localMatches.length > 0) {
+        return localMatches.map((p) => ({
+          googlePlaceId: p.google_place_id || `local_${p.id}`,
+          name: p.name,
+          formattedAddress: p.address,
+          latitude: Number(p.latitude),
+          longitude: Number(p.longitude),
+          category: p.category,
+          alreadyImportedId: p.id,
+        }));
+      }
+    }
+
+    const fallbackQuery = cleanQuery || 'Local Próximo';
     return [
       {
         googlePlaceId: `gp_${Buffer.from(fallbackQuery).toString('hex').slice(0, 16)}`,
@@ -472,7 +564,7 @@ export class PlacesService {
         formattedAddress: `${fallbackQuery}, Av. Paulista, 1000 - São Paulo, SP`,
         latitude: latitude ?? -23.5614,
         longitude: longitude ?? -46.6565,
-        category: 'RESTAURANT',
+        category: 'Restaurante',
         alreadyImportedId: importedMap.get(`gp_${Buffer.from(fallbackQuery).toString('hex').slice(0, 16)}`) ?? null,
       },
     ];

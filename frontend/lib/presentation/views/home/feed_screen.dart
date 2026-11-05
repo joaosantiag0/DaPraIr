@@ -43,13 +43,6 @@ class _FeedScreenState extends State<FeedScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.rule_folder_outlined),
-            tooltip: 'Regras da Comunidade',
-            onPressed: () {
-              CommunityRulesSheet.show(context);
-            },
-          ),
-          IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Atualizar feed',
             onPressed: () {

@@ -62,11 +62,14 @@ class _ForumHomeViewState extends State<ForumHomeView> {
     );
   }
 
-  void _onOpenCreateTopic(List<dynamic> categories) {
+  void _onOpenCreateTopic(List<dynamic> categories) async {
     if (!widget.isAuthenticated && widget.onNavigateToLogin != null) {
       widget.onNavigateToLogin!();
       return;
     }
+
+    await CommunityRulesSheet.ensureAcknowledged(context);
+    if (!mounted) return;
 
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -89,11 +92,6 @@ class _ForumHomeViewState extends State<ForumHomeView> {
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.rule_folder_outlined),
-            tooltip: 'Regras da Comunidade',
-            onPressed: () => CommunityRulesSheet.show(context),
-          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Atualizar fórum',

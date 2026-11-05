@@ -7,6 +7,7 @@ import '../../components/forum_topic_tile.dart';
 import '../../components/guest_action_dialog.dart';
 import 'topic_detail_view.dart';
 import 'create_topic_view.dart';
+import '../../components/community_rules_sheet.dart';
 import '../../../domain/entities/forum_category.dart';
 
 class CategoryTopicsView extends StatefulWidget {
@@ -231,11 +232,14 @@ class _CategoryTopicsViewState extends State<CategoryTopicsView> {
     );
   }
 
-  void _openCreateTopic() {
+  void _openCreateTopic() async {
     if (!widget.isAuthenticated) {
       _onRequireLogin('abrir novos debates');
       return;
     }
+
+    await CommunityRulesSheet.ensureAcknowledged(context);
+    if (!mounted) return;
 
     final singleCat = ForumCategory(
       id: widget.categoryId,

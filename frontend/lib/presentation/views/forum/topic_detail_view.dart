@@ -8,6 +8,7 @@ import '../../components/forum_comment_thread.dart';
 import '../../components/visibility_badge.dart';
 import '../../components/guest_action_dialog.dart';
 import '../../components/content_report_dialog.dart';
+import '../../components/community_rules_sheet.dart';
 import '../../../domain/entities/forum_comment.dart';
 import '../../../domain/entities/content_report.dart';
 
@@ -76,7 +77,7 @@ class _TopicDetailViewState extends State<TopicDetailView> {
     });
   }
 
-  void _submitComment(String topicVisibility) {
+  void _submitComment(String topicVisibility) async {
     if (!widget.isAuthenticated) {
       _onRequireLogin('participar do debate');
       return;
@@ -84,6 +85,11 @@ class _TopicDetailViewState extends State<TopicDetailView> {
 
     final text = _commentController.text.trim();
     if (text.isEmpty) return;
+
+    final shown = await CommunityRulesSheet.ensureAcknowledged(context);
+    if (shown) return;
+
+    if (!mounted) return;
 
     // Enforce ceiling rule
     String effectiveVisibility = _selectedVisibility;

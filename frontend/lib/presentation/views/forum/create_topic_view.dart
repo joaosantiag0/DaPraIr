@@ -33,6 +33,9 @@ class _CreateTopicViewState extends State<CreateTopicView> {
     super.initState();
     _selectedCategoryId = widget.preselectedCategoryId ??
         (widget.categories.isNotEmpty ? widget.categories.first.id : null);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      CommunityRulesSheet.ensureAcknowledged(context);
+    });
   }
 
   @override
@@ -42,7 +45,7 @@ class _CreateTopicViewState extends State<CreateTopicView> {
     super.dispose();
   }
 
-  void _submit() {
+  void _submit() async {
     if (_formKey.currentState?.validate() ?? false) {
       if (_selectedCategoryId == null) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -51,6 +54,10 @@ class _CreateTopicViewState extends State<CreateTopicView> {
         return;
       }
 
+      final shown = await CommunityRulesSheet.ensureAcknowledged(context);
+      if (shown) return;
+
+      if (!mounted) return;
       context.read<ForumBloc>().add(
             CreateTopicEvent(
               categoryId: _selectedCategoryId!,
@@ -70,13 +77,6 @@ class _CreateTopicViewState extends State<CreateTopicView> {
           'Novo Debate',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.rule_folder_outlined),
-            tooltip: 'Regras da Comunidade',
-            onPressed: () => CommunityRulesSheet.show(context),
-          ),
-        ],
       ),
       body: BlocConsumer<ForumBloc, ForumState>(
         listener: (context, state) {
@@ -130,7 +130,7 @@ class _CreateTopicViewState extends State<CreateTopicView> {
                             ),
                             const SizedBox(height: 2),
                             const Text(
-                              'Você pode propor discussões sobre qualquer tema que desejar — vivências, cultura, lazer ou amizade —, sempre de acordo com as regras de respeito da comunidade.',
+                              'Você pode propor discussões sobre qualquer tema que desejar — vivências, cultura, lazer ou amizade —, sempre com respeito mútuo. Conteúdos com extremismo político e religioso devem ser evitados e poderão ser removidos.',
                               style: TextStyle(fontSize: 12, color: Color(0xFF64748B), height: 1.3),
                             ),
                             const SizedBox(height: 4),

@@ -9,6 +9,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../components/accessible_button.dart';
 import '../../components/accessible_text_field.dart';
 import '../../components/guest_action_dialog.dart';
+import '../../components/community_rules_sheet.dart';
 import '../../components/responsive_container.dart';
 import '../auth/login_screen.dart';
 
@@ -180,7 +181,7 @@ class _SubmitReviewScreenState extends State<SubmitReviewScreen> {
     setState(() => _isSavingDraft = false);
   }
 
-  void _submitReview() {
+  void _submitReview() async {
     try {
       final authBloc = BlocProvider.of<AuthBloc>(context);
       if (authBloc.state is! Authenticated) {
@@ -245,6 +246,10 @@ class _SubmitReviewScreenState extends State<SubmitReviewScreen> {
       );
       return;
     }
+
+    final shown = await CommunityRulesSheet.ensureAcknowledged(context);
+    if (shown) return;
+    if (!mounted) return;
 
     final ratingsList = _ratings.entries
         .map((e) => {'criterionCode': e.key, 'score': e.value})

@@ -112,13 +112,6 @@ class _SocialConnectionsScreenState extends State<SocialConnectionsScreen> with 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Comunidade e Amigos'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.rule_folder_outlined),
-            tooltip: 'Regras da Comunidade',
-            onPressed: () => CommunityRulesSheet.show(context),
-          ),
-        ],
         bottom: TabBar(
           controller: _tabController,
           labelColor: Colors.white,

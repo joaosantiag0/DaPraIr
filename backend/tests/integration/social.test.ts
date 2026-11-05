@@ -100,4 +100,44 @@ describe('Social Connections API (US3)', () => {
     const body = JSON.parse(response.body);
     expect(Array.isArray(body)).toBe(true);
   });
+
+  it('PATCH /api/v1/social/connections/:id - should allow blocking user and list under /social/blocked', async () => {
+    // User1 blocks User2
+    const blockRes = await app.inject({
+      method: 'PATCH',
+      url: `/api/v1/social/connections/${connectionId}`,
+      headers: { authorization: `Bearer ${user1Token}` },
+      payload: { status: 'BLOCKED' },
+    });
+    expect(blockRes.statusCode).toBe(200);
+
+    // List blocked
+    const listBlockedRes = await app.inject({
+      method: 'GET',
+      url: '/api/v1/social/blocked',
+      headers: { authorization: `Bearer ${user1Token}` },
+    });
+    expect(listBlockedRes.statusCode).toBe(200);
+    const blockedList = JSON.parse(listBlockedRes.body);
+    expect(blockedList.length).toBe(1);
+    expect(blockedList[0].peer.id).toBe(user2Id);
+
+    // Unblock
+    const unblockRes = await app.inject({
+      method: 'DELETE',
+      url: `/api/v1/social/blocked/${connectionId}`,
+      headers: { authorization: `Bearer ${user1Token}` },
+    });
+    expect(unblockRes.statusCode).toBe(200);
+
+    // List blocked again - should be empty
+    const listBlockedAfter = await app.inject({
+      method: 'GET',
+      url: '/api/v1/social/blocked',
+      headers: { authorization: `Bearer ${user1Token}` },
+    });
+    expect(listBlockedAfter.statusCode).toBe(200);
+    const emptyList = JSON.parse(listBlockedAfter.body);
+    expect(emptyList.length).toBe(0);
+  });
 });

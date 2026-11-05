@@ -6,7 +6,6 @@ import '../../../core/theme/app_colors.dart';
 import '../../components/accessible_button.dart';
 import '../../components/accessible_card.dart';
 import '../../components/responsive_container.dart';
-import '../../components/community_rules_sheet.dart';
 import 'chat_conversation_screen.dart';
 
 class SocialConnectionsScreen extends StatefulWidget {
@@ -213,7 +212,7 @@ class _SocialConnectionsScreenState extends State<SocialConnectionsScreen> with 
                             children: [
                               Container(
                                 padding: const EdgeInsets.all(20),
-                                decoration: BoxDecoration(
+                                decoration: const BoxDecoration(
                                   color: AppColors.surfaceMuted,
                                   shape: BoxShape.circle,
                                 ),
@@ -295,6 +294,65 @@ class _SocialConnectionsScreenState extends State<SocialConnectionsScreen> with 
                                   ),
                                   child: const Icon(Icons.chat_bubble_outline_rounded, color: AppColors.primaryBlue, size: 20),
                                 ),
+                                const SizedBox(width: 4),
+                                PopupMenuButton<String>(
+                                  icon: const Icon(Icons.more_vert, color: AppColors.textHint, size: 20),
+                                  tooltip: 'Mais opções',
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  onSelected: (val) {
+                                    if (val == 'block') {
+                                      showDialog(
+                                        context: context,
+                                        builder: (ctx) => AlertDialog(
+                                          title: const Row(
+                                            children: [
+                                              Icon(Icons.block, color: AppColors.warningOrange, size: 24),
+                                              SizedBox(width: 8),
+                                              Expanded(child: Text('Bloquear Usuário?')),
+                                            ],
+                                          ),
+                                          content: Text(
+                                            'Deseja bloquear ${friend.peer.name}? Ao bloquear, ele não poderá enviar mensagens para você. Você poderá desbloqueá-lo em Perfil > Contatos Bloqueados.',
+                                          ),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () => Navigator.pop(ctx),
+                                              child: const Text('Cancelar'),
+                                            ),
+                                            ElevatedButton(
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: AppColors.warningOrange,
+                                                foregroundColor: Colors.white,
+                                              ),
+                                              onPressed: () {
+                                                Navigator.pop(ctx);
+                                                context.read<SocialBloc>().add(
+                                                      BlockUserEvent(
+                                                        targetUserId: friend.peer.id,
+                                                        connectionId: friend.id,
+                                                      ),
+                                                    );
+                                              },
+                                              child: const Text('Bloquear'),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    }
+                                  },
+                                  itemBuilder: (ctx) => [
+                                    const PopupMenuItem(
+                                      value: 'block',
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.block, color: AppColors.warningOrange, size: 18),
+                                          SizedBox(width: 8),
+                                          Text('Bloquear Contato', style: TextStyle(color: AppColors.warningOrange)),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ],
                             ),
                           );
@@ -311,7 +369,7 @@ class _SocialConnectionsScreenState extends State<SocialConnectionsScreen> with 
                             children: [
                               Container(
                                 padding: const EdgeInsets.all(20),
-                                decoration: BoxDecoration(
+                                decoration: const BoxDecoration(
                                   color: AppColors.surfaceMuted,
                                   shape: BoxShape.circle,
                                 ),
@@ -405,7 +463,7 @@ class _SocialConnectionsScreenState extends State<SocialConnectionsScreen> with 
                             children: [
                               Container(
                                 padding: const EdgeInsets.all(20),
-                                decoration: BoxDecoration(
+                                decoration: const BoxDecoration(
                                   color: AppColors.surfaceMuted,
                                   shape: BoxShape.circle,
                                 ),

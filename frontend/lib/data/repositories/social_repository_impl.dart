@@ -97,4 +97,46 @@ class SocialRepositoryImpl implements SocialRepository {
       );
     }).toList();
   }
+
+  @override
+  Future<List<SocialConnection>> getBlockedUsers() async {
+    final response = await dioClient.dio.get('/api/v1/social/blocked');
+    final list = (response.data as List<dynamic>?) ?? [];
+
+    return list.map((json) {
+      final map = json as Map<String, dynamic>? ?? {};
+      final p = (map['peer'] as Map<String, dynamic>?) ?? {};
+      final rawDate = map['createdAt'] ?? map['created_at'];
+      final createdAt = rawDate != null
+          ? DateTime.tryParse(rawDate.toString()) ?? DateTime.now()
+          : DateTime.now();
+
+      return SocialConnection(
+        id: (map['id'] ?? '').toString(),
+        status: (map['status'] ?? 'BLOCKED').toString(),
+        isOutgoing: map['isOutgoing'] as bool? ?? false,
+        createdAt: createdAt,
+        peer: SocialPeer(
+          id: (p['id'] ?? '').toString(),
+          name: (p['name'] ?? 'Usuário').toString(),
+          handle: (p['handle'] ?? '').toString(),
+          avatarUrl: p['avatarUrl'] as String?,
+          bio: p['bio'] as String?,
+        ),
+      );
+    }).toList();
+  }
+
+  @override
+  Future<void> blockUser(String targetUserId) async {
+    await dioClient.dio.post(
+      '/api/v1/social/block',
+      data: {'targetUserId': targetUserId},
+    );
+  }
+
+  @override
+  Future<void> unblockUser(String connectionId) async {
+    await dioClient.dio.delete('/api/v1/social/blocked/$connectionId');
+  }
 }

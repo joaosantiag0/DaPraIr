@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../bloc/chat/chat_bloc.dart';
+import '../../bloc/social/social_bloc.dart';
 import '../../../core/accessibility/semantics_helper.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../components/accessible_button.dart';
@@ -97,14 +98,46 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
             icon: const Icon(Icons.block_outlined),
             tooltip: 'Bloquear usuário e fechar conversa',
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('${widget.peerName} foi bloqueado.'),
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              showDialog(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Row(
+                    children: [
+                      Icon(Icons.block, color: AppColors.warningOrange, size: 24),
+                      SizedBox(width: 8),
+                      Expanded(child: Text('Bloquear Usuário?')),
+                    ],
+                  ),
+                  content: Text(
+                    'Deseja bloquear ${widget.peerName}? Ao bloquear, ele não poderá enviar mensagens diretas para você. Você poderá desbloqueá-lo a qualquer momento em Perfil > Contatos Bloqueados.',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('Cancelar'),
+                    ),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.warningOrange,
+                        foregroundColor: Colors.white,
+                      ),
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        context.read<SocialBloc>().add(BlockUserEvent(targetUserId: widget.peerUserId));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('${widget.peerName} foi bloqueado.'),
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                        );
+                        Navigator.pop(context);
+                      },
+                      child: const Text('Bloquear'),
+                    ),
+                  ],
                 ),
               );
-              Navigator.pop(context);
             },
           ),
         ],

@@ -52,6 +52,7 @@ void main() {
       build: () {
         when(() => mockSocialRepo.getConnections()).thenAnswer((_) async => [testConnection]);
         when(() => mockSocialRepo.getRecommendations()).thenAnswer((_) async => []);
+        when(() => mockSocialRepo.getBlockedUsers()).thenAnswer((_) async => []);
         return SocialBloc(repository: mockSocialRepo);
       },
       act: (bloc) => bloc.add(LoadSocialDataEvent()),
@@ -61,6 +62,7 @@ void main() {
           friends: [testConnection],
           pendingReceived: const [],
           pendingSent: const [],
+          blockedUsers: const [],
           recommendations: const [],
         ),
       ],

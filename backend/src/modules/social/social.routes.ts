@@ -44,6 +44,38 @@ export async function socialRoutes(app: FastifyInstance) {
     }
   );
 
+  // List blocked users
+  app.get(
+    '/social/blocked',
+    { preHandler: [app.authenticate] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const blocked = await socialService.getBlockedUsers(request.user.id);
+      return reply.status(200).send(blocked);
+    }
+  );
+
+  // Block a user by targetUserId
+  app.post(
+    '/social/block',
+    { preHandler: [app.authenticate] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const body = createConnectionSchema.parse(request.body);
+      const result = await socialService.blockUser(request.user.id, body.targetUserId);
+      return reply.status(200).send(result);
+    }
+  );
+
+  // Unblock user by connectionId
+  app.delete(
+    '/social/blocked/:id',
+    { preHandler: [app.authenticate] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+      const result = await socialService.unblockUser(request.user.id, id);
+      return reply.status(200).send(result);
+    }
+  );
+
   // Get peer affinity recommendations
   app.get(
     '/social/recommendations',

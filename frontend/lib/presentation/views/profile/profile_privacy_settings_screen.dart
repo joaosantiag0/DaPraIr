@@ -5,6 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../components/accessible_button.dart';
 import '../../components/responsive_container.dart';
 import 'account_data_governance_screen.dart';
+import 'blocked_contacts_screen.dart';
 
 class ProfilePrivacySettingsScreen extends StatefulWidget {
   final bool isAuthenticated;
@@ -236,6 +237,68 @@ class _ProfilePrivacySettingsScreenState extends State<ProfilePrivacySettingsScr
                 const SizedBox(height: 28),
                 const Divider(color: AppColors.borderLight),
                 const SizedBox(height: 16),
+
+                // Link to Blocked Contacts screen
+                Card(
+                  elevation: 0.5,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    side: const BorderSide(color: AppColors.borderLight, width: 1.2),
+                  ),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const BlockedContactsScreen(),
+                        ),
+                      );
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceMuted,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(
+                              Icons.block_outlined,
+                              color: AppColors.warningOrange,
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Contatos Bloqueados',
+                                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  'Gerencie pessoas bloqueadas e desbloqueie contatos',
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                        color: AppColors.textSecondary,
+                                      ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.chevron_right, color: AppColors.textHint),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
 
                 // Link to second screen (Account & Data Governance)
                 Card(

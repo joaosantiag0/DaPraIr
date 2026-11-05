@@ -55,6 +55,23 @@ class UpdateConnectionStatusEvent extends SocialEvent {
   List<Object?> get props => [connectionId, status];
 }
 
+class BlockUserEvent extends SocialEvent {
+  final String targetUserId;
+  final String? connectionId;
+  const BlockUserEvent({required this.targetUserId, this.connectionId});
+  @override
+  List<Object?> get props => [targetUserId, connectionId];
+}
+
+class UnblockUserEvent extends SocialEvent {
+  final String connectionId;
+  const UnblockUserEvent(this.connectionId);
+  @override
+  List<Object?> get props => [connectionId];
+}
+
+class LoadBlockedUsersEvent extends SocialEvent {}
+
 // States
 abstract class SocialState extends Equatable {
   const SocialState();
@@ -69,6 +86,7 @@ class SocialLoaded extends SocialState {
   final List<SocialConnection> friends;
   final List<SocialConnection> pendingReceived;
   final List<SocialConnection> pendingSent;
+  final List<SocialConnection> blockedUsers;
   final List<UserProfile> recommendations;
   final String? actionMessage;
   final String? actionError;
@@ -77,6 +95,7 @@ class SocialLoaded extends SocialState {
     required this.friends,
     required this.pendingReceived,
     required this.pendingSent,
+    this.blockedUsers = const [],
     required this.recommendations,
     this.actionMessage,
     this.actionError,
@@ -86,6 +105,7 @@ class SocialLoaded extends SocialState {
     List<SocialConnection>? friends,
     List<SocialConnection>? pendingReceived,
     List<SocialConnection>? pendingSent,
+    List<SocialConnection>? blockedUsers,
     List<UserProfile>? recommendations,
     String? actionMessage,
     String? actionError,
@@ -94,6 +114,7 @@ class SocialLoaded extends SocialState {
       friends: friends ?? this.friends,
       pendingReceived: pendingReceived ?? this.pendingReceived,
       pendingSent: pendingSent ?? this.pendingSent,
+      blockedUsers: blockedUsers ?? this.blockedUsers,
       recommendations: recommendations ?? this.recommendations,
       actionMessage: actionMessage,
       actionError: actionError,
@@ -101,7 +122,7 @@ class SocialLoaded extends SocialState {
   }
 
   @override
-  List<Object?> get props => [friends, pendingReceived, pendingSent, recommendations, actionMessage, actionError];
+  List<Object?> get props => [friends, pendingReceived, pendingSent, blockedUsers, recommendations, actionMessage, actionError];
 }
 
 class SocialError extends SocialState {
@@ -117,8 +138,11 @@ class SocialBloc extends Bloc<SocialEvent, SocialState> {
 
   SocialBloc({required this.repository}) : super(SocialInitial()) {
     on<LoadSocialDataEvent>(_onLoadSocialData);
+    on<LoadBlockedUsersEvent>(_onLoadBlockedUsers);
     on<SendConnectionRequestEvent>(_onSendRequest);
     on<UpdateConnectionStatusEvent>(_onUpdateStatus);
+    on<BlockUserEvent>(_onBlockUser);
+    on<UnblockUserEvent>(_onUnblockUser);
   }
 
   Future<void> _onLoadSocialData(LoadSocialDataEvent event, Emitter<SocialState> emit) async {
@@ -126,6 +150,7 @@ class SocialBloc extends Bloc<SocialEvent, SocialState> {
     try {
       final connections = await repository.getConnections();
       final recommendations = await repository.getRecommendations();
+      final blocked = await repository.getBlockedUsers();
 
       final friends = connections.where((c) => c.status == 'ACCEPTED').toList();
       final pendingReceived = connections.where((c) => c.status == 'PENDING' && !c.isOutgoing).toList();
@@ -135,10 +160,36 @@ class SocialBloc extends Bloc<SocialEvent, SocialState> {
         friends: friends,
         pendingReceived: pendingReceived,
         pendingSent: pendingSent,
+        blockedUsers: blocked,
         recommendations: recommendations,
       ));
     } catch (e) {
       emit(SocialError(cleanSocialErrorMessage(e)));
+    }
+  }
+
+  Future<void> _onLoadBlockedUsers(LoadBlockedUsersEvent event, Emitter<SocialState> emit) async {
+    try {
+      final blocked = await repository.getBlockedUsers();
+      if (state is SocialLoaded) {
+        final current = state as SocialLoaded;
+        emit(current.copyWith(blockedUsers: blocked));
+      } else {
+        emit(SocialLoaded(
+          friends: const [],
+          pendingReceived: const [],
+          pendingSent: const [],
+          blockedUsers: blocked,
+          recommendations: const [],
+        ));
+      }
+    } catch (e) {
+      if (state is SocialLoaded) {
+        final current = state as SocialLoaded;
+        emit(current.copyWith(actionError: cleanSocialErrorMessage(e)));
+      } else {
+        emit(SocialError(cleanSocialErrorMessage(e)));
+      }
     }
   }
 
@@ -147,6 +198,7 @@ class SocialBloc extends Bloc<SocialEvent, SocialState> {
       await repository.sendConnectionRequest(event.targetUserId);
       final connections = await repository.getConnections();
       final recommendations = await repository.getRecommendations();
+      final blocked = await repository.getBlockedUsers();
 
       final friends = connections.where((c) => c.status == 'ACCEPTED').toList();
       final pendingReceived = connections.where((c) => c.status == 'PENDING' && !c.isOutgoing).toList();
@@ -156,6 +208,7 @@ class SocialBloc extends Bloc<SocialEvent, SocialState> {
         friends: friends,
         pendingReceived: pendingReceived,
         pendingSent: pendingSent,
+        blockedUsers: blocked,
         recommendations: recommendations,
         actionMessage: 'Solicitação de conexão enviada com sucesso!',
       ));
@@ -174,18 +227,86 @@ class SocialBloc extends Bloc<SocialEvent, SocialState> {
       await repository.updateConnectionStatus(event.connectionId, event.status);
       final connections = await repository.getConnections();
       final recommendations = await repository.getRecommendations();
+      final blocked = await repository.getBlockedUsers();
 
       final friends = connections.where((c) => c.status == 'ACCEPTED').toList();
       final pendingReceived = connections.where((c) => c.status == 'PENDING' && !c.isOutgoing).toList();
       final pendingSent = connections.where((c) => c.status == 'PENDING' && c.isOutgoing).toList();
 
-      final msg = event.status == 'ACCEPTED' ? 'Solicitação aceita!' : 'Solicitação recusada.';
+      final msg = event.status == 'ACCEPTED'
+          ? 'Solicitação aceita!'
+          : (event.status == 'BLOCKED' ? 'Usuário bloqueado com sucesso.' : 'Solicitação recusada.');
       emit(SocialLoaded(
         friends: friends,
         pendingReceived: pendingReceived,
         pendingSent: pendingSent,
+        blockedUsers: blocked,
         recommendations: recommendations,
         actionMessage: msg,
+      ));
+    } catch (e) {
+      if (state is SocialLoaded) {
+        final current = state as SocialLoaded;
+        emit(current.copyWith(actionError: cleanSocialErrorMessage(e)));
+      } else {
+        emit(SocialError(cleanSocialErrorMessage(e)));
+      }
+    }
+  }
+
+  Future<void> _onBlockUser(BlockUserEvent event, Emitter<SocialState> emit) async {
+    try {
+      if (event.connectionId != null) {
+        await repository.updateConnectionStatus(event.connectionId!, 'BLOCKED');
+      } else {
+        await repository.blockUser(event.targetUserId);
+      }
+
+      final connections = await repository.getConnections();
+      final recommendations = await repository.getRecommendations();
+      final blocked = await repository.getBlockedUsers();
+
+      final friends = connections.where((c) => c.status == 'ACCEPTED').toList();
+      final pendingReceived = connections.where((c) => c.status == 'PENDING' && !c.isOutgoing).toList();
+      final pendingSent = connections.where((c) => c.status == 'PENDING' && c.isOutgoing).toList();
+
+      emit(SocialLoaded(
+        friends: friends,
+        pendingReceived: pendingReceived,
+        pendingSent: pendingSent,
+        blockedUsers: blocked,
+        recommendations: recommendations,
+        actionMessage: 'Contato bloqueado com sucesso.',
+      ));
+    } catch (e) {
+      if (state is SocialLoaded) {
+        final current = state as SocialLoaded;
+        emit(current.copyWith(actionError: cleanSocialErrorMessage(e)));
+      } else {
+        emit(SocialError(cleanSocialErrorMessage(e)));
+      }
+    }
+  }
+
+  Future<void> _onUnblockUser(UnblockUserEvent event, Emitter<SocialState> emit) async {
+    try {
+      await repository.unblockUser(event.connectionId);
+
+      final connections = await repository.getConnections();
+      final recommendations = await repository.getRecommendations();
+      final blocked = await repository.getBlockedUsers();
+
+      final friends = connections.where((c) => c.status == 'ACCEPTED').toList();
+      final pendingReceived = connections.where((c) => c.status == 'PENDING' && !c.isOutgoing).toList();
+      final pendingSent = connections.where((c) => c.status == 'PENDING' && c.isOutgoing).toList();
+
+      emit(SocialLoaded(
+        friends: friends,
+        pendingReceived: pendingReceived,
+        pendingSent: pendingSent,
+        blockedUsers: blocked,
+        recommendations: recommendations,
+        actionMessage: 'Contato desbloqueado com sucesso.',
       ));
     } catch (e) {
       if (state is SocialLoaded) {

@@ -9,4 +9,7 @@ abstract class SocialRepository {
   Future<SocialConnection> updateConnectionStatus(String connectionId, String status);
 
   Future<List<UserProfile>> getRecommendations();
+  Future<List<SocialConnection>> getBlockedUsers();
+  Future<void> blockUser(String targetUserId);
+  Future<void> unblockUser(String connectionId);
 }

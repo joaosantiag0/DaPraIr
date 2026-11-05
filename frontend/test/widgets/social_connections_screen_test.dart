@@ -52,6 +52,7 @@ void main() {
   testWidgets('loads and displays tabs when user is authenticated', (tester) async {
     when(() => mockSocialRepo.getConnections()).thenAnswer((_) async => []);
     when(() => mockSocialRepo.getRecommendations()).thenAnswer((_) async => []);
+    when(() => mockSocialRepo.getBlockedUsers()).thenAnswer((_) async => []);
 
     await tester.pumpWidget(
       createWidgetUnderTest(isAuthenticated: true),

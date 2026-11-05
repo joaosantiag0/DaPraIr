@@ -81,6 +81,101 @@ export class SocialService {
   }
 
   /**
+   * Get blocked users for the current user
+   */
+  async getBlockedUsers(userId: string) {
+    const connections = await prisma.socialConnection.findMany({
+      where: {
+        OR: [{ requester_id: userId }, { addressee_id: userId }],
+        status: 'BLOCKED',
+      },
+      include: {
+        requester: true,
+        addressee: true,
+      },
+      orderBy: { updated_at: 'desc' },
+    });
+
+    return connections.map((c) => {
+      const isRequester = c.requester_id === userId;
+      const peer = isRequester ? c.addressee : c.requester;
+      return {
+        id: c.id,
+        status: c.status,
+        isOutgoing: isRequester,
+        createdAt: c.created_at,
+        peer: {
+          id: peer.id,
+          name: peer.name,
+          handle: peer.handle,
+          avatarUrl: peer.avatar_url,
+          bio: peer.bio,
+        },
+      };
+    });
+  }
+
+  /**
+   * Block a user directly by their targetUserId
+   */
+  async blockUser(userId: string, targetUserId: string) {
+    if (userId === targetUserId) {
+      throw new BadRequestError('Não é possível bloquear a si mesmo');
+    }
+
+    const existing = await prisma.socialConnection.findFirst({
+      where: {
+        OR: [
+          { requester_id: userId, addressee_id: targetUserId },
+          { requester_id: targetUserId, addressee_id: userId },
+        ],
+      },
+    });
+
+    if (existing) {
+      return prisma.socialConnection.update({
+        where: { id: existing.id },
+        data: {
+          requester_id: userId,
+          addressee_id: targetUserId,
+          status: 'BLOCKED',
+        },
+      });
+    }
+
+    return prisma.socialConnection.create({
+      data: {
+        requester_id: userId,
+        addressee_id: targetUserId,
+        status: 'BLOCKED',
+      },
+    });
+  }
+
+  /**
+   * Unblock user (removes the connection record completely)
+   */
+  async unblockUser(userId: string, connectionId: string) {
+    const connection = await prisma.socialConnection.findUnique({
+      where: { id: connectionId },
+    });
+
+    if (!connection) {
+      throw new NotFoundError('Conexão não encontrada');
+    }
+
+    if (connection.requester_id !== userId && connection.addressee_id !== userId) {
+      throw new ForbiddenError('Acesso não autorizado');
+    }
+
+    await prisma.socialConnection.delete({
+      where: { id: connectionId },
+    });
+
+    return { message: 'Contato desbloqueado com sucesso' };
+  }
+
+  /**
    * Update connection status (ACCEPT, DECLINE, BLOCK)
    */
   async updateStatus(
@@ -106,6 +201,17 @@ export class SocialService {
     // Either user can block
     if (connection.requester_id !== userId && connection.addressee_id !== userId) {
       throw new ForbiddenError('Acesso não autorizado a esta conexão');
+    }
+
+    if (newStatus === 'BLOCKED') {
+      return prisma.socialConnection.update({
+        where: { id: connectionId },
+        data: {
+          requester_id: userId,
+          addressee_id: connection.requester_id === userId ? connection.addressee_id : connection.requester_id,
+          status: newStatus,
+        },
+      });
     }
 
     return prisma.socialConnection.update({

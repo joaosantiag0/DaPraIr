@@ -4,6 +4,7 @@ import '../../bloc/chat/chat_bloc.dart';
 import '../../../core/accessibility/semantics_helper.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../components/accessible_button.dart';
+import '../../components/responsive_container.dart';
 
 class ChatConversationScreen extends StatefulWidget {
   final String peerUserId;
@@ -107,9 +108,10 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // Security Notice
+      body: ResponsiveContainer.medium(
+        child: Column(
+          children: [
+            // Security Notice
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: const BoxDecoration(
@@ -327,6 +329,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 }

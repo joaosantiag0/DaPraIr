@@ -17,6 +17,8 @@ const envSchema = z.object({
   S3_BUCKET_NAME: z.string().default('daprair-media'),
   S3_FORCE_PATH_STYLE: z.coerce.boolean().default(true),
   GOOGLE_PLACES_API_KEY: z.string().optional().default(''),
+  GOOGLE_PLACES_DAILY_LIMIT: z.coerce.number().default(30),
+  ENABLE_AUTO_GOOGLE_PLACES_SYNC: z.coerce.boolean().default(false),
 });
 
 const _env = envSchema.safeParse(process.env);

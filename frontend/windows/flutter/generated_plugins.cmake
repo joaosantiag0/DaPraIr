@@ -3,8 +3,7 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
-  geolocator_windows
-  sqlite3_flutter_libs
+  file_selector_windows
   url_launcher_windows
 )
 

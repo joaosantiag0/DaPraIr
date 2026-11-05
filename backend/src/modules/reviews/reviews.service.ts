@@ -4,15 +4,15 @@ import { NotFoundError, BadRequestError } from '../../core/errors/app-error.js';
 export interface RatingInput {
   criterionCode: string;
   score: number;
-  notes?: string;
+  notes?: string | null;
 }
 
 export interface CreateReviewDTO {
   placeId: string;
   userId: string;
-  generalComment?: string;
+  generalComment?: string | null;
   ratings: RatingInput[];
-  mediaIds?: string[];
+  mediaIds?: string[] | null;
 }
 
 export class ReviewsService {
@@ -20,7 +20,10 @@ export class ReviewsService {
    * Submit multicriteria review and update place aggregates
    */
   async createReview(data: CreateReviewDTO) {
-    const { placeId, userId, generalComment, ratings, mediaIds = [] } = data;
+    const { placeId, userId, generalComment, ratings } = data;
+    const rawMediaIds = data.mediaIds ?? [];
+    const mediaIds = Array.isArray(rawMediaIds) ? rawMediaIds.filter(Boolean) : [];
+    const sanitizedComment = generalComment && generalComment.trim().length > 0 ? generalComment.trim() : null;
 
     if (!ratings || ratings.length === 0) {
       throw new BadRequestError('É obrigatório avaliar ao menos um critério de acessibilidade');
@@ -61,7 +64,7 @@ export class ReviewsService {
         data: {
           place_id: placeId,
           user_id: userId,
-          general_comment: generalComment,
+          general_comment: sanitizedComment,
           average_score: reviewAverage,
           status: 'PUBLISHED',
         },

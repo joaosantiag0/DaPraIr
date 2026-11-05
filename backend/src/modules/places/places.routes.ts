@@ -1,5 +1,6 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { placesService } from './places.service.js';
+import { googleQuotaService } from './google-quota.service.js';
 import { z } from 'zod';
 
 const searchPlacesQuerySchema = z.object({
@@ -17,15 +18,15 @@ const searchPlacesQuerySchema = z.object({
 
 const createPlaceSchema = z.object({
   name: z.string().min(2),
-  description: z.string().optional(),
+  description: z.string().nullable().optional(),
   category: z.string(),
   address: z.string().min(5),
   city: z.string().min(2),
   state: z.string().min(2),
-  postalCode: z.string().optional(),
+  postalCode: z.string().nullable().optional(),
   latitude: z.number(),
   longitude: z.number(),
-  googlePlaceId: z.string().optional(),
+  googlePlaceId: z.string().nullable().optional(),
 });
 
 export async function placesRoutes(app: FastifyInstance) {
@@ -45,6 +46,12 @@ export async function placesRoutes(app: FastifyInstance) {
       longitude ? Number(longitude) : undefined
     );
     return reply.status(200).send(result);
+  });
+
+  // Google Places quota usage & status
+  app.get('/places/quota-stats', async (_request: FastifyRequest, reply: FastifyReply) => {
+    const stats = googleQuotaService.getStats();
+    return reply.status(200).send(stats);
   });
 
   // Public single place detail

@@ -41,6 +41,9 @@ services:
       S3_BUCKET_NAME: daprair-media
       S3_REGION: us-east-1
       S3_FORCE_PATH_STYLE: "true"
+      GOOGLE_PLACES_API_KEY: ${GOOGLE_PLACES_API_KEY:-AIzaSyC7PM1cEYKk_SjdlIlezGVcIi_ybO1yOq0}
+    volumes:
+      - uploads_data:/app/uploads
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3333/health"]
       interval: 10s
@@ -72,3 +75,4 @@ services:
 volumes:
   postgres_data:
   minio_data:
+  uploads_data:

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:intl/intl.dart';
+import '../../../core/utils/date_formatter.dart';
 import '../../../domain/entities/event.dart';
 import '../../bloc/events/events_bloc.dart';
 import '../../components/accessible_button.dart';
@@ -13,8 +13,6 @@ class EventDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dateFormat = DateFormat('dd/MM/yyyy HH:mm');
-
     return BlocBuilder<EventsBloc, EventsState>(
       builder: (context, state) {
         // Find current version of event from state if updated
@@ -63,7 +61,7 @@ class EventDetailScreen extends StatelessWidget {
                             const Icon(Icons.calendar_today, size: 20),
                             const SizedBox(width: 8),
                             Text(
-                              'Início: ${dateFormat.format(currentEvent.startTime)}',
+                              'Início: ${DateFormatter.formatDateTime(currentEvent.startTime)}',
                               style: Theme.of(context).textTheme.bodyMedium,
                             ),
                           ],
@@ -74,7 +72,7 @@ class EventDetailScreen extends StatelessWidget {
                             const Icon(Icons.access_time, size: 20),
                             const SizedBox(width: 8),
                             Text(
-                              'Término: ${dateFormat.format(currentEvent.endTime)}',
+                              'Término: ${DateFormatter.formatDateTime(currentEvent.endTime)}',
                               style: Theme.of(context).textTheme.bodyMedium,
                             ),
                           ],

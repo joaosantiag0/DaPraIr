@@ -1,4 +1,4 @@
-import 'package:equatable/equatable.dart';
+import 'package:frontend/core/base/equatable.dart';
 import 'place.dart';
 
 class ReviewRatingItem extends Equatable {

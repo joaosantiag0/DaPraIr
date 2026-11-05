@@ -4,6 +4,7 @@ import '../../bloc/events/events_bloc.dart';
 import '../../../domain/entities/event.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../components/accessible_button.dart';
+import '../../components/responsive_container.dart';
 import 'create_event_screen.dart';
 import 'event_detail_screen.dart';
 
@@ -58,9 +59,10 @@ class _EventsListScreenState extends State<EventsListScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // Accessibility Filter Chips
+      body: ResponsiveContainer.wide(
+        child: Column(
+          children: [
+            // Accessibility Filter Chips
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -199,8 +201,9 @@ class _EventsListScreenState extends State<EventsListScreen> {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 }
 
 class EventCard extends StatelessWidget {

@@ -7,6 +7,8 @@ import {
 } from '@aws-sdk/client-s3';
 import sharp from 'sharp';
 import crypto from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
 import { config } from '../../config.js';
 
 export class StorageService {
@@ -68,36 +70,75 @@ export class StorageService {
       .webp({ quality: 70 })
       .toBuffer();
 
-    await this.client.send(
-      new PutObjectCommand({
-        Bucket: this.bucket,
-        Key: key,
-        Body: optimizedBuffer,
-        ContentType: 'image/webp',
-      })
-    );
+    try {
+      await this.ensureBucket();
 
-    await this.client.send(
-      new PutObjectCommand({
-        Bucket: this.bucket,
-        Key: thumbKey,
-        Body: thumbBuffer,
-        ContentType: 'image/webp',
-      })
-    );
+      await this.client.send(
+        new PutObjectCommand({
+          Bucket: this.bucket,
+          Key: key,
+          Body: optimizedBuffer,
+          ContentType: 'image/webp',
+        })
+      );
 
-    const baseUrl = `${config.S3_ENDPOINT}/${this.bucket}`;
-    const mediaUrl = `${baseUrl}/${key}`;
-    const thumbnailUrl = `${baseUrl}/${thumbKey}`;
+      await this.client.send(
+        new PutObjectCommand({
+          Bucket: this.bucket,
+          Key: thumbKey,
+          Body: thumbBuffer,
+          ContentType: 'image/webp',
+        })
+      );
 
-    return {
-      mediaUrl,
-      thumbnailUrl,
-      mimeType: 'image/webp',
-      sizeBytes: optimizedBuffer.length,
-      key,
-      thumbnailKey: thumbKey,
-    };
+      const baseUrl = `${config.S3_ENDPOINT}/${this.bucket}`;
+      const mediaUrl = `${baseUrl}/${key}`;
+      const thumbnailUrl = `${baseUrl}/${thumbKey}`;
+
+      return {
+        mediaUrl,
+        thumbnailUrl,
+        mimeType: 'image/webp',
+        sizeBytes: optimizedBuffer.length,
+        key,
+        thumbnailKey: thumbKey,
+      };
+    } catch (s3Err: any) {
+      console.warn('S3 upload warning (falling back to local disk storage):', s3Err?.message);
+      try {
+        const uploadDir = path.resolve(process.cwd(), 'uploads', prefix);
+        await fs.promises.mkdir(uploadDir, { recursive: true });
+        const filePath = path.join(uploadDir, `${fileId}.webp`);
+        const thumbPath = path.join(uploadDir, `${fileId}-thumb.webp`);
+        await fs.promises.writeFile(filePath, optimizedBuffer);
+        await fs.promises.writeFile(thumbPath, thumbBuffer);
+
+        const baseUrl = `http://localhost:${config.PORT}`;
+        const mediaUrl = `${baseUrl}/uploads/${prefix}/${fileId}.webp`;
+        const thumbnailUrl = `${baseUrl}/uploads/${prefix}/${fileId}-thumb.webp`;
+
+        return {
+          mediaUrl,
+          thumbnailUrl,
+          mimeType: 'image/webp',
+          sizeBytes: optimizedBuffer.length,
+          key,
+          thumbnailKey: thumbKey,
+        };
+      } catch (diskErr: any) {
+        console.warn('Local disk save error (falling back to data URL):', diskErr?.message);
+        const base64Data = optimizedBuffer.toString('base64');
+        const thumbBase64 = thumbBuffer.toString('base64');
+        return {
+          mediaUrl: `data:image/webp;base64,${base64Data}`,
+          thumbnailUrl: `data:image/webp;base64,${thumbBase64}`,
+          mimeType: 'image/webp',
+          sizeBytes: optimizedBuffer.length,
+          key,
+          thumbnailKey: thumbKey,
+        };
+      }
+    }
   }
 
   async deleteImage(key: string): Promise<void> {

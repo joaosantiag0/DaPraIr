@@ -1,5 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:equatable/equatable.dart';
+import 'package:frontend/core/base/equatable.dart';
 import 'package:dio/dio.dart';
 import '../../../domain/entities/social_connection.dart';
 import '../../../domain/entities/user_profile.dart';

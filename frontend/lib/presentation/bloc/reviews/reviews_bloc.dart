@@ -1,5 +1,6 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:equatable/equatable.dart';
+import 'package:frontend/core/base/equatable.dart';
 import '../../../domain/entities/review.dart';
 import '../../../domain/repositories/places_repository.dart';
 
@@ -22,16 +23,30 @@ class SubmitReviewEvent extends ReviewsEvent {
   final String? generalComment;
   final List<Map<String, dynamic>> ratings;
   final List<String>? mediaIds;
+  final List<int>? photoBytes;
+  final String? photoAltText;
+  final String? photoFileName;
 
   const SubmitReviewEvent({
     required this.placeId,
     this.generalComment,
     required this.ratings,
     this.mediaIds,
+    this.photoBytes,
+    this.photoAltText,
+    this.photoFileName,
   });
 
   @override
-  List<Object?> get props => [placeId, generalComment, ratings, mediaIds];
+  List<Object?> get props => [
+        placeId,
+        generalComment,
+        ratings,
+        mediaIds,
+        photoBytes,
+        photoAltText,
+        photoFileName,
+      ];
 }
 
 class SaveReviewDraftEvent extends ReviewsEvent {
@@ -127,11 +142,25 @@ class ReviewsBloc extends Bloc<ReviewsEvent, ReviewsState> {
   Future<void> _onSubmitReview(SubmitReviewEvent event, Emitter<ReviewsState> emit) async {
     emit(ReviewsLoading());
     try {
+      List<String>? effectiveMediaIds = event.mediaIds != null ? List<String>.from(event.mediaIds!) : null;
+
+      if (event.photoBytes != null &&
+          event.photoAltText != null &&
+          event.photoAltText!.trim().length >= 5) {
+        final uploadedMediaId = await repository.uploadPhoto(
+          placeId: event.placeId,
+          altText: event.photoAltText!.trim(),
+          bytes: event.photoBytes!,
+          fileName: event.photoFileName ?? 'review_photo.jpg',
+        );
+        effectiveMediaIds = [...(effectiveMediaIds ?? []), uploadedMediaId];
+      }
+
       final review = await repository.submitReview(
         placeId: event.placeId,
         generalComment: event.generalComment,
         ratings: event.ratings,
-        mediaIds: event.mediaIds,
+        mediaIds: effectiveMediaIds,
       );
       final updatedReviews = await repository.getPlaceReviews(event.placeId);
       emit(ReviewsLoaded(
@@ -140,7 +169,16 @@ class ReviewsBloc extends Bloc<ReviewsEvent, ReviewsState> {
         submitSuccess: true,
       ));
     } catch (e) {
-      emit(ReviewsError(e.toString()));
+      String errorMessage = e.toString();
+      if (e is DioException) {
+        final data = e.response?.data;
+        if (data is Map && data['message'] != null) {
+          errorMessage = data['message'].toString();
+        } else if (e.response?.statusCode == 401) {
+          errorMessage = 'Você precisa estar logado para publicar uma avaliação.';
+        }
+      }
+      emit(ReviewsError(errorMessage));
     }
   }
 

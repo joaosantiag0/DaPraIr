@@ -3,17 +3,17 @@ import { reviewsService } from './reviews.service.js';
 import { z } from 'zod';
 
 const createReviewSchema = z.object({
-  generalComment: z.string().optional(),
+  generalComment: z.string().nullable().optional(),
   ratings: z
     .array(
       z.object({
         criterionCode: z.string(),
         score: z.number().int().min(1).max(5),
-        notes: z.string().optional(),
+        notes: z.string().nullable().optional(),
       })
     )
     .min(1),
-  mediaIds: z.array(z.string().uuid()).optional(),
+  mediaIds: z.array(z.string().uuid()).nullable().optional(),
 });
 
 export async function reviewsRoutes(app: FastifyInstance) {

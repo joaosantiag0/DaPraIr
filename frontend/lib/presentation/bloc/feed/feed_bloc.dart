@@ -1,4 +1,4 @@
-import 'package:equatable/equatable.dart';
+import 'package:frontend/core/base/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../domain/entities/feed_item.dart';
 import '../../../domain/entities/content_report.dart';

@@ -33,6 +33,15 @@ export class PrivacyService {
         bio: user.bio,
         createdAt: user.created_at,
       },
+      savedLocation: user.encrypted_location
+        ? (() => {
+            try {
+              return CryptoService.decryptPayload(user.encrypted_location);
+            } catch {
+              return null;
+            }
+          })()
+        : null,
       accessibilityProfile: user.accessibility_profile
         ? {
             disabilityTypes: user.accessibility_profile.disability_types,
@@ -105,6 +114,7 @@ export class PrivacyService {
           password_hash: null,
           avatar_url: null,
           bio: null,
+          encrypted_location: null,
           is_anonymous: true,
           status: 'DELETED',
         },

@@ -1,4 +1,4 @@
-import 'package:equatable/equatable.dart';
+import 'package:frontend/core/base/equatable.dart';
 
 class ChatMessage extends Equatable {
   final String id;

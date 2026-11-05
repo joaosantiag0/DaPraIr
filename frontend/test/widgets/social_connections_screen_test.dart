@@ -3,8 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:frontend/presentation/bloc/social/social_bloc.dart';
-import 'package:frontend/presentation/bloc/auth/auth_bloc.dart';
-import 'package:frontend/domain/entities/social_connection.dart';
 import 'package:frontend/domain/repositories/social_repository.dart';
 import 'package:frontend/presentation/views/social/social_connections_screen.dart';
 

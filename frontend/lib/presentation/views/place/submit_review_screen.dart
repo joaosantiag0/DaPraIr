@@ -1,10 +1,16 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:image_picker/image_picker.dart';
+import '../../bloc/auth/auth_bloc.dart';
 import '../../bloc/reviews/reviews_bloc.dart';
 import '../../../core/accessibility/semantics_helper.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../components/accessible_button.dart';
 import '../../components/accessible_text_field.dart';
+import '../../components/guest_action_dialog.dart';
+import '../../components/responsive_container.dart';
+import '../auth/login_screen.dart';
 
 class SubmitReviewScreen extends StatefulWidget {
   final String placeId;
@@ -19,15 +25,7 @@ class _SubmitReviewScreenState extends State<SubmitReviewScreen> {
   final TextEditingController _commentController = TextEditingController();
   final TextEditingController _altTextController = TextEditingController();
 
-  final Map<String, int> _ratings = {
-    'ENTRANCE_RAMP_LEVEL': 5,
-    'ELEVATOR_LIFT': 5,
-    'ADAPTED_BATHROOM': 5,
-    'MANEUVERING_SPACE': 4,
-    'ADAPTED_SEATING': 4,
-    'ACCESSIBLE_PARKING': 5,
-    'INCLUSIVE_SERVICE': 5,
-  };
+  final Map<String, int> _ratings = {};
 
   final List<Map<String, dynamic>> _criteriaList = [
     {'code': 'ENTRANCE_RAMP_LEVEL', 'title': 'Entrada com Rampa ou Nivelada', 'icon': Icons.accessible_forward},
@@ -41,6 +39,8 @@ class _SubmitReviewScreenState extends State<SubmitReviewScreen> {
 
   bool _isSavingDraft = false;
   bool _hasPhotoAttached = false;
+  XFile? _selectedPhoto;
+  Uint8List? _photoBytes;
 
   @override
   void initState() {
@@ -55,7 +55,10 @@ class _SubmitReviewScreenState extends State<SubmitReviewScreen> {
     super.dispose();
   }
 
-  String _getRatingFeedback(int score) {
+  String _getRatingFeedback(int? score) {
+    if (score == null) {
+      return 'Toque nas estrelas para avaliar';
+    }
     switch (score) {
       case 1:
         return '1 - Inacessível';
@@ -72,13 +75,92 @@ class _SubmitReviewScreenState extends State<SubmitReviewScreen> {
     }
   }
 
+  Future<void> _showPhotoSourceDialog() async {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.camera_alt_rounded, color: AppColors.primaryBlue),
+                title: const Text('Tirar Foto com a Câmera'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickImage(ImageSource.camera);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library_rounded, color: AppColors.primaryBlue),
+                title: const Text('Escolher da Galeria'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickImage(ImageSource.gallery);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final picker = ImagePicker();
+      final photo = await picker.pickImage(
+        source: source,
+        maxWidth: 1920,
+        maxHeight: 1080,
+        imageQuality: 85,
+      );
+      if (photo != null) {
+        final bytes = await photo.readAsBytes();
+        setState(() {
+          _selectedPhoto = photo;
+          _photoBytes = bytes;
+          _hasPhotoAttached = true;
+        });
+        SemanticsHelper.announce('Foto selecionada com sucesso');
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Não foi possível carregar a imagem: $e')),
+      );
+    }
+  }
+
+  void _removePhoto() {
+    setState(() {
+      _selectedPhoto = null;
+      _photoBytes = null;
+      _hasPhotoAttached = false;
+      _altTextController.clear();
+    });
+    SemanticsHelper.announce('Foto removida');
+  }
+
   void _saveDraft() {
     setState(() => _isSavingDraft = true);
+    final List<Map<String, String>> photos = [];
+    if (_hasPhotoAttached && _altTextController.text.isNotEmpty) {
+      photos.add({
+        'altText': _altTextController.text.trim(),
+        'name': _selectedPhoto?.name ?? 'foto.jpg',
+      });
+    }
+
     context.read<ReviewsBloc>().add(
           SaveReviewDraftEvent(
             placeId: widget.placeId,
             generalComment: _commentController.text,
             ratings: _ratings,
+            photos: photos,
           ),
         );
     SemanticsHelper.announce('Rascunho de avaliação salvo no dispositivo');
@@ -99,6 +181,49 @@ class _SubmitReviewScreenState extends State<SubmitReviewScreen> {
   }
 
   void _submitReview() {
+    try {
+      final authBloc = BlocProvider.of<AuthBloc>(context);
+      if (authBloc.state is! Authenticated) {
+        GuestActionDialog.show(
+          context: context,
+          actionTitle: 'publicar uma avaliação',
+          onLoginPressed: () async {
+            final loggedIn = await Navigator.of(context).push<bool>(
+              MaterialPageRoute(builder: (_) => const LoginScreen()),
+            );
+            if (context.mounted && (loggedIn == true || authBloc.state is Authenticated)) {
+              _submitReview();
+            }
+          },
+        );
+        return;
+      }
+    } catch (_) {
+      // AuthBloc not provided in context (e.g. isolated test)
+    }
+
+    if (_ratings.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: AppColors.warningOrange,
+          content: const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.white, size: 20),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Avalie pelo menos 1 critério de acessibilidade antes de publicar.',
+                ),
+              ),
+            ],
+          ),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
+      return;
+    }
+
     if (_hasPhotoAttached && _altTextController.text.trim().length < 5) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -130,6 +255,9 @@ class _SubmitReviewScreenState extends State<SubmitReviewScreen> {
             placeId: widget.placeId,
             generalComment: _commentController.text.trim(),
             ratings: ratingsList,
+            photoBytes: _photoBytes,
+            photoAltText: _hasPhotoAttached ? _altTextController.text.trim() : null,
+            photoFileName: _selectedPhoto?.name,
           ),
         );
   }
@@ -172,6 +300,25 @@ class _SubmitReviewScreenState extends State<SubmitReviewScreen> {
             );
             Navigator.pop(context);
           }
+          if (state is ReviewsError) {
+            SemanticsHelper.announce('Erro ao publicar avaliação: ${state.message}');
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                backgroundColor: AppColors.warningOrange,
+                content: Row(
+                  children: [
+                    const Icon(Icons.error_outline, color: Colors.white, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text('Erro ao publicar avaliação: ${state.message}'),
+                    ),
+                  ],
+                ),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            );
+          }
           if (state is ReviewsLoaded && state.draft != null) {
             final draft = state.draft!;
             if (draft['generalComment'] != null && _commentController.text.isEmpty) {
@@ -181,19 +328,27 @@ class _SubmitReviewScreenState extends State<SubmitReviewScreen> {
               final draftRatings = draft['ratings'] as Map<String, dynamic>;
               setState(() {
                 draftRatings.forEach((k, v) {
-                  if (_ratings.containsKey(k)) {
+                  if (_criteriaList.any((c) => c['code'] == k)) {
                     _ratings[k] = (v as num).toInt();
                   }
                 });
               });
             }
+            if (draft['photos'] is List && (draft['photos'] as List).isNotEmpty) {
+              final photoInfo = (draft['photos'] as List).first;
+              if (photoInfo is Map && photoInfo['altText'] != null && _altTextController.text.isEmpty) {
+                _altTextController.text = photoInfo['altText'] as String;
+                _hasPhotoAttached = true;
+              }
+            }
           }
         },
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
+          child: ResponsiveContainer.medium(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
               // Intro Guidance Card
               Container(
                 padding: const EdgeInsets.all(14),
@@ -262,14 +417,17 @@ class _SubmitReviewScreenState extends State<SubmitReviewScreen> {
                 final code = crit['code'] as String;
                 final title = crit['title'] as String;
                 final icon = crit['icon'] as IconData;
-                final currentScore = _ratings[code] ?? 5;
+                final currentScore = _ratings[code];
 
                 return Card(
                   margin: const EdgeInsets.only(bottom: 14),
                   elevation: 0.8,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
-                    side: const BorderSide(color: AppColors.borderLight, width: 1.2),
+                    side: BorderSide(
+                      color: currentScore != null ? AppColors.primaryBlue.withOpacity(0.35) : AppColors.borderLight,
+                      width: 1.2,
+                    ),
                   ),
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
@@ -281,10 +439,14 @@ class _SubmitReviewScreenState extends State<SubmitReviewScreen> {
                             Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: AppColors.primaryContainer,
+                                color: currentScore != null ? AppColors.primaryContainer : AppColors.surfaceMuted,
                                 borderRadius: BorderRadius.circular(10),
                               ),
-                              child: Icon(icon, color: AppColors.primaryBlue, size: 20),
+                              child: Icon(
+                                icon,
+                                color: currentScore != null ? AppColors.primaryBlue : AppColors.textSecondary,
+                                size: 20,
+                              ),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
@@ -293,6 +455,25 @@ class _SubmitReviewScreenState extends State<SubmitReviewScreen> {
                                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                               ),
                             ),
+                            if (currentScore != null)
+                              Semantics(
+                                button: true,
+                                label: 'Limpar nota de $title',
+                                child: TextButton(
+                                  onPressed: () {
+                                    setState(() => _ratings.remove(code));
+                                    SemanticsHelper.announce('Nota de $title removida');
+                                  },
+                                  style: TextButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    minimumSize: const Size(48, 48),
+                                  ),
+                                  child: const Text(
+                                    'Limpar',
+                                    style: TextStyle(fontSize: 12, color: AppColors.textHint),
+                                  ),
+                                ),
+                              ),
                           ],
                         ),
                         const SizedBox(height: 12),
@@ -302,15 +483,25 @@ class _SubmitReviewScreenState extends State<SubmitReviewScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: List.generate(5, (index) {
                             final score = index + 1;
-                            final isSelected = score <= currentScore;
+                            final isSelected = currentScore != null && score <= currentScore;
                             return Semantics(
                               button: true,
                               label: 'Nota $score de 5 para $title',
-                              selected: score == currentScore,
+                              selected: currentScore == score,
                               child: InkWell(
                                 onTap: () {
-                                  setState(() => _ratings[code] = score);
-                                  SemanticsHelper.announce('$title avaliado com $score estrelas');
+                                  setState(() {
+                                    if (_ratings[code] == score) {
+                                      _ratings.remove(code);
+                                    } else {
+                                      _ratings[code] = score;
+                                    }
+                                  });
+                                  SemanticsHelper.announce(
+                                    _ratings.containsKey(code)
+                                        ? '$title avaliado com $score estrelas'
+                                        : 'Nota de $title removida',
+                                  );
                                 },
                                 borderRadius: BorderRadius.circular(24),
                                 child: Container(
@@ -331,15 +522,16 @@ class _SubmitReviewScreenState extends State<SubmitReviewScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
-                            color: AppColors.surfaceMuted,
+                            color: currentScore != null ? AppColors.surfaceMuted : Colors.transparent,
+                            border: currentScore != null ? null : Border.all(color: AppColors.borderLight),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
                             _getRatingFeedback(currentScore),
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.textSecondary,
+                              fontWeight: currentScore != null ? FontWeight.bold : FontWeight.normal,
+                              color: currentScore != null ? AppColors.textSecondary : AppColors.textHint,
                             ),
                           ),
                         ),
@@ -374,43 +566,94 @@ class _SubmitReviewScreenState extends State<SubmitReviewScreen> {
               ),
               const SizedBox(height: 10),
 
-              // Photo Upload Box
-              InkWell(
-                onTap: () {
-                  setState(() => _hasPhotoAttached = !_hasPhotoAttached);
-                },
-                borderRadius: BorderRadius.circular(14),
-                child: Container(
-                  padding: const EdgeInsets.all(16),
+              // Photo Upload & Preview Section
+              if (_photoBytes != null) ...[
+                Container(
                   decoration: BoxDecoration(
-                    color: _hasPhotoAttached ? AppColors.successLight.withOpacity(0.4) : AppColors.surfaceMuted,
+                    color: AppColors.surfaceMuted,
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: _hasPhotoAttached ? AppColors.successGreen : AppColors.borderLight,
-                      width: 1.5,
-                    ),
+                    border: Border.all(color: AppColors.primaryBlue.withOpacity(0.3), width: 1.5),
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  clipBehavior: Clip.antiAlias,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Icon(
-                        _hasPhotoAttached ? Icons.check_circle_rounded : Icons.add_a_photo_rounded,
-                        color: _hasPhotoAttached ? AppColors.successGreen : AppColors.primaryBlue,
-                        size: 24,
+                      Container(
+                        constraints: const BoxConstraints(minHeight: 120, maxHeight: 300),
+                        width: double.infinity,
+                        color: Colors.black.withOpacity(0.04),
+                        alignment: Alignment.center,
+                        child: Image.memory(
+                          _photoBytes!,
+                          fit: BoxFit.contain,
+                        ),
                       ),
-                      const SizedBox(width: 10),
-                      Text(
-                        _hasPhotoAttached ? 'Foto Anexada ✓ (Toque para remover)' : 'Anexar Foto do Local',
-                        style: TextStyle(
-                          color: _hasPhotoAttached ? AppColors.successGreen : AppColors.primaryBlue,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.check_circle_rounded, color: AppColors.successGreen, size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                _selectedPhoto?.name ?? 'Foto selecionada',
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            TextButton.icon(
+                              onPressed: _showPhotoSourceDialog,
+                              icon: const Icon(Icons.swap_horiz, size: 16),
+                              label: const Text('Trocar', style: TextStyle(fontSize: 12)),
+                            ),
+                            IconButton(
+                              onPressed: _removePhoto,
+                              icon: const Icon(Icons.delete_outline_rounded, color: AppColors.warningOrange, size: 20),
+                              tooltip: 'Remover foto',
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
                 ),
-              ),
+              ] else ...[
+                InkWell(
+                  onTap: _showPhotoSourceDialog,
+                  borderRadius: BorderRadius.circular(14),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceMuted,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: AppColors.borderLight,
+                        width: 1.5,
+                      ),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.add_a_photo_rounded,
+                          color: AppColors.primaryBlue,
+                          size: 24,
+                        ),
+                        SizedBox(width: 10),
+                        Text(
+                          'Anexar Foto do Local',
+                          style: TextStyle(
+                            color: AppColors.primaryBlue,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
 
               if (_hasPhotoAttached) ...[
                 const SizedBox(height: 14),
@@ -462,6 +705,7 @@ class _SubmitReviewScreenState extends State<SubmitReviewScreen> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }

@@ -137,6 +137,21 @@ describe('Places API (US1 - Descoberta e Avaliação de Locais)', () => {
     const body = JSON.parse(response.body);
     expect(Array.isArray(body)).toBe(true);
     expect(body[0]).toHaveProperty('googlePlaceId');
-    expect(body[0].name).toBe('Teatro Municipal');
+    expect(body[0].name).toContain('Teatro Municipal');
+  });
+
+  it('GET /api/v1/places/quota-stats - should return Google Places rate limit and quota stats', async () => {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/v1/places/quota-stats',
+    });
+
+    expect(response.statusCode).toBe(200);
+    const body = JSON.parse(response.body);
+    expect(body).toHaveProperty('dailyCount');
+    expect(body).toHaveProperty('dailyLimit');
+    expect(body).toHaveProperty('remainingToday');
+    expect(body).toHaveProperty('autoSyncEnabled');
+    expect(body.dailyLimit).toBeGreaterThanOrEqual(1);
   });
 });

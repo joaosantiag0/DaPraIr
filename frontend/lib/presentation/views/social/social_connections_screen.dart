@@ -5,6 +5,7 @@ import '../../../core/accessibility/semantics_helper.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../components/accessible_button.dart';
 import '../../components/accessible_card.dart';
+import '../../components/responsive_container.dart';
 import 'chat_conversation_screen.dart';
 
 class SocialConnectionsScreen extends StatefulWidget {
@@ -197,9 +198,10 @@ class _SocialConnectionsScreenState extends State<SocialConnectionsScreen> with 
           }
 
           if (state is SocialLoaded) {
-            return TabBarView(
-              controller: _tabController,
-              children: [
+            return ResponsiveContainer.wide(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
                 // 1. Friends Tab
                 state.friends.isEmpty
                     ? Center(
@@ -473,8 +475,9 @@ class _SocialConnectionsScreenState extends State<SocialConnectionsScreen> with 
                         },
                       ),
               ],
-            );
-          }
+            ),
+          );
+        }
 
           return const SizedBox.shrink();
         },

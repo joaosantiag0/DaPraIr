@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'core/theme/app_theme.dart';
 import 'core/network/dio_client.dart';
-import 'data/local/app_database.dart';
 import 'data/local/places_dao.dart';
 import 'data/repositories/auth_repository_impl.dart';
 import 'data/repositories/places_repository_impl.dart';
@@ -37,8 +36,7 @@ void main() {
   WidgetsFlutterBinding.ensureInitialized();
 
   final dioClient = DioClient();
-  final appDatabase = AppDatabase();
-  final placesDao = PlacesDao(appDatabase);
+  final placesDao = PlacesDao();
 
   final placesRepo = PlacesRepositoryImpl(dioClient: dioClient, placesDao: placesDao);
   final authRepo = AuthRepositoryImpl(dioClient: dioClient);
@@ -105,8 +103,7 @@ class _DaPraIrAppState extends State<DaPraIrApp> {
   @override
   Widget build(BuildContext context) {
     final dioClient = DioClient();
-    final appDatabase = AppDatabase();
-    final placesDao = PlacesDao(appDatabase);
+    final placesDao = PlacesDao();
 
     final placesRepo = widget.placesRepository ?? PlacesRepositoryImpl(dioClient: dioClient, placesDao: placesDao);
     final authRepo = widget.authRepository ?? AuthRepositoryImpl(dioClient: dioClient);
@@ -118,46 +115,53 @@ class _DaPraIrAppState extends State<DaPraIrApp> {
     final reportsRepo = widget.reportsRepository ?? ReportsRepositoryImpl(dioClient.dio);
     final forumRepo = widget.forumRepository ?? ForumRepositoryImpl(dio: dioClient.dio);
 
-    return MultiBlocProvider(
+    return MultiRepositoryProvider(
       providers: [
-        BlocProvider<AuthBloc>(
-          create: (_) => AuthBloc(repository: authRepo)..add(CheckAuthStatusEvent()),
-        ),
-        BlocProvider<PlacesBloc>(
-          create: (_) => PlacesBloc(repository: placesRepo),
-        ),
-        BlocProvider<ReviewsBloc>(
-          create: (_) => ReviewsBloc(repository: placesRepo),
-        ),
-        BlocProvider<SocialBloc>(
-          create: (_) => SocialBloc(repository: socialRepo),
-        ),
-        BlocProvider<ChatBloc>(
-          create: (_) => ChatBloc(repository: chatRepo),
-        ),
-        BlocProvider<EventsBloc>(
-          create: (_) => EventsBloc(eventsRepo),
-        ),
-        BlocProvider<FeedBloc>(
-          create: (_) => FeedBloc(
-            feedRepository: feedRepo,
-            reportsRepository: reportsRepo,
-          ),
-        ),
-        BlocProvider<ProfileBloc>(
-          create: (_) => ProfileBloc(repository: userRepo),
-        ),
-        BlocProvider<ForumBloc>(
-          create: (_) => ForumBloc(forumRepository: forumRepo),
-        ),
+        RepositoryProvider<PlacesRepository>.value(value: placesRepo),
+        RepositoryProvider<AuthRepository>.value(value: authRepo),
+        RepositoryProvider<ForumRepository>.value(value: forumRepo),
       ],
-      child: MaterialApp(
-        title: 'DáPraIr?',
-        debugShowCheckedModeBanner: false,
-        theme: _isHighContrast ? AppTheme.highContrastTheme : AppTheme.lightTheme,
-        home: MainNavigationScreen(
-          onToggleHighContrast: toggleHighContrast,
-          isHighContrast: _isHighContrast,
+      child: MultiBlocProvider(
+        providers: [
+          BlocProvider<AuthBloc>(
+            create: (_) => AuthBloc(repository: authRepo)..add(CheckAuthStatusEvent()),
+          ),
+          BlocProvider<PlacesBloc>(
+            create: (_) => PlacesBloc(repository: placesRepo),
+          ),
+          BlocProvider<ReviewsBloc>(
+            create: (_) => ReviewsBloc(repository: placesRepo),
+          ),
+          BlocProvider<SocialBloc>(
+            create: (_) => SocialBloc(repository: socialRepo),
+          ),
+          BlocProvider<ChatBloc>(
+            create: (_) => ChatBloc(repository: chatRepo),
+          ),
+          BlocProvider<EventsBloc>(
+            create: (_) => EventsBloc(eventsRepo),
+          ),
+          BlocProvider<FeedBloc>(
+            create: (_) => FeedBloc(
+              feedRepository: feedRepo,
+              reportsRepository: reportsRepo,
+            ),
+          ),
+          BlocProvider<ProfileBloc>(
+            create: (_) => ProfileBloc(repository: userRepo),
+          ),
+          BlocProvider<ForumBloc>(
+            create: (_) => ForumBloc(forumRepository: forumRepo),
+          ),
+        ],
+        child: MaterialApp(
+          title: 'DáPraIr?',
+          debugShowCheckedModeBanner: false,
+          theme: _isHighContrast ? AppTheme.highContrastTheme : AppTheme.lightTheme,
+          home: MainNavigationScreen(
+            onToggleHighContrast: toggleHighContrast,
+            isHighContrast: _isHighContrast,
+          ),
         ),
       ),
     );

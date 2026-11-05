@@ -6,6 +6,7 @@ import '../../../domain/entities/event.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../components/accessible_button.dart';
 import '../../components/content_report_dialog.dart';
+import '../../components/responsive_container.dart';
 import '../place/place_detail_screen.dart';
 import '../events/event_detail_screen.dart';
 
@@ -134,8 +135,9 @@ class _FeedScreenState extends State<FeedScreen> {
             onRefresh: () async {
               context.read<FeedBloc>().add(const RefreshFeedRequested());
             },
-            child: ListView(
-              padding: const EdgeInsets.only(top: 16, bottom: 28),
+            child: ResponsiveContainer.wide(
+              child: ListView(
+                padding: const EdgeInsets.only(top: 16, bottom: 28),
               children: [
                 // Welcome Hero Header
                 Padding(
@@ -361,8 +363,9 @@ class _FeedScreenState extends State<FeedScreen> {
                 ],
               ],
             ),
-          );
-        },
+          ),
+        );
+      },
       ),
     );
   }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../bloc/profile/profile_bloc.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../components/accessible_button.dart';
@@ -45,9 +46,9 @@ class _ProfilePrivacySettingsScreenState extends State<ProfilePrivacySettingsScr
     if (!widget.isAuthenticated) {
       return Scaffold(
         appBar: AppBar(title: const Text('Privacidade e Dados')),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: ResponsiveContainer.medium(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -81,7 +82,7 @@ class _ProfilePrivacySettingsScreenState extends State<ProfilePrivacySettingsScr
                         height: 1.4,
                       ),
                 ),
-                const SizedBox(height: 28),
+                const SizedBox(height: 24),
                 AccessibleButton(
                   label: 'Entrar ou Cadastrar',
                   icon: Icons.login,
@@ -91,6 +92,8 @@ class _ProfilePrivacySettingsScreenState extends State<ProfilePrivacySettingsScr
                     }
                   },
                 ),
+                const SizedBox(height: 32),
+                _buildOpenSourceCreditsSection(context),
               ],
             ),
           ),
@@ -119,7 +122,7 @@ class _ProfilePrivacySettingsScreenState extends State<ProfilePrivacySettingsScr
                   decoration: BoxDecoration(
                     color: AppColors.primaryContainer,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.primaryBlue.withOpacity(0.15)),
+                    border: Border.all(color: AppColors.primaryBlue.withValues(alpha: 0.15)),
                   ),
                   child: Row(
                     children: [
@@ -183,7 +186,7 @@ class _ProfilePrivacySettingsScreenState extends State<ProfilePrivacySettingsScr
                 ),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
-                  value: _visibility,
+                  initialValue: _visibility,
                   decoration: const InputDecoration(
                     contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   ),
@@ -361,11 +364,313 @@ class _ProfilePrivacySettingsScreenState extends State<ProfilePrivacySettingsScr
                   ),
                 ),
                 const SizedBox(height: 24),
+                const Divider(color: AppColors.borderLight),
+                const SizedBox(height: 20),
+
+                // Open Source & Credits Section
+                _buildOpenSourceCreditsSection(context),
+                const SizedBox(height: 28),
               ],
             ),
           ),
         );
       },
+      ),
+    );
+  }
+
+  Widget _buildOpenSourceCreditsSection(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surfaceLight,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.borderLight, width: 1.2),
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: const BoxDecoration(
+                  color: AppColors.secondaryContainer,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.favorite_rounded,
+                  color: AppColors.accentTeal,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Projeto Open Source',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'Licença Aberta MIT • Comunidade',
+                      style: TextStyle(
+                        color: AppColors.accentTeal,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          const Text(
+            'O DáPraIr? é um projeto comunitário, gratuito e 100% de código aberto, dedicado a mapear, avaliar e compartilhar a acessibilidade física real no Brasil. Apoiamos o desenvolvimento transparente, colaborativo e auditável.',
+            style: TextStyle(
+              fontSize: 13,
+              color: AppColors.textSecondary,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 14),
+          const Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _CreditTag(label: 'ABNT NBR 9050', icon: Icons.architecture),
+              _CreditTag(label: 'W3C WCAG 2.1 AA/AAA', icon: Icons.accessibility_new),
+              _CreditTag(label: 'LGPD Compliance', icon: Icons.privacy_tip_outlined),
+              _CreditTag(label: 'Flutter & PostGIS', icon: Icons.code),
+            ],
+          ),
+          const SizedBox(height: 18),
+          const Divider(color: AppColors.borderLight),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    side: const BorderSide(color: AppColors.borderLight),
+                  ),
+                  icon: const Icon(Icons.info_outline, size: 18),
+                  label: const Text('Ver Créditos'),
+                  onPressed: () => _showCreditsDialog(context),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    side: const BorderSide(color: AppColors.borderLight),
+                  ),
+                  icon: const Icon(Icons.article_outlined, size: 18),
+                  label: const Text('Licenças'),
+                  onPressed: () {
+                    showLicensePage(
+                      context: context,
+                      applicationName: 'DáPraIr?',
+                      applicationVersion: '1.0.0+1',
+                      applicationIcon: const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: Icon(Icons.accessible_forward, size: 48, color: AppColors.primaryBlue),
+                      ),
+                      applicationLegalese: 'Licenciado sob a Licença MIT.\nDesenvolvido com foco em acessibilidade universal.',
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: TextButton.icon(
+              icon: const Icon(Icons.open_in_new, size: 16, color: AppColors.primaryBlue),
+              label: const Text(
+                'Visitar repositório no GitHub',
+                style: TextStyle(color: AppColors.primaryBlue, fontWeight: FontWeight.bold, fontSize: 13),
+              ),
+              onPressed: () async {
+                final uri = Uri.parse('https://github.com/joaosantiag0/DaPraIr');
+                if (await canLaunchUrl(uri)) {
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                }
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showCreditsDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.workspace_premium_outlined, color: AppColors.primaryBlue, size: 28),
+            SizedBox(width: 10),
+            Expanded(child: Text('Créditos & Referências')),
+          ],
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildCreditCategory(
+                  icon: Icons.person_outline,
+                  title: 'Autoria & Comunidade',
+                  description:
+                      'Idealizado e desenvolvido por João Santiago e contribuidores da comunidade open source DáPraIr?.',
+                ),
+                const SizedBox(height: 14),
+                _buildCreditCategory(
+                  icon: Icons.accessible_forward,
+                  title: 'Norma Técnica de Acessibilidade Física',
+                  description:
+                      'ABNT NBR 9050:2020 — Critérios padronizados de acessibilidade a edificações, mobiliário, espaços e equipamentos urbanos (7 critérios oficiais).',
+                ),
+                const SizedBox(height: 14),
+                _buildCreditCategory(
+                  icon: Icons.remove_red_eye_outlined,
+                  title: 'Acessibilidade Digital',
+                  description:
+                      'W3C WCAG 2.1 (Níveis AA e AAA) — Alto contraste, leitores de tela semânticos, alvos de toque acessíveis (mínimo 48px) e suporte a foco/teclado.',
+                ),
+                const SizedBox(height: 14),
+                _buildCreditCategory(
+                  icon: Icons.security,
+                  title: 'Privacidade & Proteção de Dados',
+                  description:
+                      'LGPD (Lei nº 13.709/2018) — Criptografia de dados sensíveis de saúde com AES-256-GCM, senhas em Argon2id e anonimização SHA-256.',
+                ),
+                const SizedBox(height: 14),
+                _buildCreditCategory(
+                  icon: Icons.layers_outlined,
+                  title: 'Tecnologias & Bibliotecas Livres',
+                  description:
+                      'Construído com Flutter & Dart (Google), Fastify & TypeScript, PostgreSQL com extensão espacial PostGIS e Prisma ORM.',
+                ),
+                const SizedBox(height: 14),
+                _buildCreditCategory(
+                  icon: Icons.description_outlined,
+                  title: 'Licenciamento Aberto',
+                  description:
+                      'Distribuído sob os termos da Licença MIT. Software livre para inspeção, auditoria de acessibilidade e contribuições comunitárias.',
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Fechar'),
+          ),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryBlue,
+              foregroundColor: Colors.white,
+            ),
+            icon: const Icon(Icons.open_in_new, size: 16),
+            label: const Text('Repositório'),
+            onPressed: () async {
+              final uri = Uri.parse('https://github.com/joaosantiag0/DaPraIr');
+              if (await canLaunchUrl(uri)) {
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              }
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCreditCategory({
+    required IconData icon,
+    required String title,
+    required String description,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: AppColors.primaryContainer,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, size: 18, color: AppColors.primaryBlue),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                description,
+                style: const TextStyle(fontSize: 12, color: AppColors.textSecondary, height: 1.3),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CreditTag extends StatelessWidget {
+  final String label;
+  final IconData icon;
+
+  const _CreditTag({required this.label, required this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceMuted,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.borderLight),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: AppColors.primaryBlue),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
+          ),
+        ],
       ),
     );
   }

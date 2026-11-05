@@ -1,33 +1,103 @@
-# DáPraIr? — Plataforma Social e Avaliações de Acessibilidade Física
+# DáPraIr? — Physical Accessibility Platform & Social Community
 
-O **DáPraIr?** é um ecossistema multiplataforma (Web & Mobile) e colaborativo dedicado a mapear, avaliar e compartilhar condições reais de acessibilidade física em estabelecimentos, espaços urbanos e eventos comunitários.
+[![🇧🇷 Português](https://img.shields.io/badge/Language-Português-green?style=flat-square)](README.pt-BR.md)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
+[![Flutter](https://img.shields.io/badge/Flutter-v3.24%2B-02569B?logo=flutter&style=flat-square)](https://flutter.dev)
+[![Fastify](https://img.shields.io/badge/Fastify-v4-black?logo=fastify&style=flat-square)](https://fastify.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&style=flat-square)](https://www.typescriptlang.org)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16%20%2B%20PostGIS-336791?logo=postgresql&style=flat-square)](https://www.postgresql.org)
+[![WCAG](https://img.shields.io/badge/Accessibility-WCAG%202.1%20AA%2FAAA-green?style=flat-square)](https://www.w3.org/WAI/standards-guidelines/wcag/)
+
+> **Read this in other languages:**  
+> 🇺🇸 **English** | 🇧🇷 [Versão em Português](README.pt-BR.md)
+
+**DáPraIr?** (*Can I Go There?*) is a collaborative, multi-platform (Mobile, Web, and Desktop) ecosystem designed to map, assess, and share real-world physical accessibility conditions of public venues, urban spaces, and community events.
+
+Built in accordance with Brazilian accessibility standard **ABNT NBR 9050** and international digital accessibility guidelines **WCAG 2.1 (AA and AAA levels)**, the project unites citizen crowdsourcing, social connection, and strict data privacy compliance under **LGPD** (Brazil's General Data Protection Law).
 
 ---
 
-## 🚀 Como Executar o Projeto Localmente
+## ✨ Key Features
 
-### 1. Pré-requisitos
-- **Node.js**: v20+ e npm
-- **Docker & Docker Compose** (para PostgreSQL 16 + PostGIS)
-- **Flutter SDK**: v3.24+
+### ♿ Citizen-Driven Accessibility Reviews
+- Comprehensive location evaluations across **7 standardized criteria** based on ABNT NBR 9050.
+- Photo uploads with **mandatory alternative text (`alt_text`)** for screen readers.
+- Offline draft autosave via local storage (`SharedPreferences`).
+
+### 🗺️ Smart Geospatial Search & Google Places Integration
+- API quota protection with local geospatial database fallback powered by **PostGIS**.
+- 24-hour query cache for cost efficiency and offline resilience.
+- 500m geogrid clustering for local venue synchronization.
+
+### 💬 Categorized Community Forums & Threaded Debates
+- Public, community-restricted, and private discussions structured by topic categories.
+- Nested replies and subthreads with collapsible comment trees.
+- Transparent `(edited)` badges and real-time like/comment engagement counters.
+- Seamless view state caching across nested screen navigation and authentication changes.
+
+### 🤝 Social Connections & Direct Chat
+- Mutual friendships, connection requests, and profile discovery based on shared accessibility needs.
+- Real-time direct chat with end-to-end security and polite guest preview mode.
+
+### 🛡️ Community Moderation & Automatic Quarantine
+- Anonymous reporting on reviews, debates, and comments.
+- **Automatic Quarantine**: items receiving 3+ distinct reports are instantly hidden from public feeds pending human moderation.
+- Rules onboarding on the user's first post: active encouragement to report violations, and explicit guidance that political and religious extremism should be avoided and is subject to removal.
+
+### 🔒 LGPD Compliance & Privacy by Design
+- Sensitive health conditions and precise coordinates encrypted using **AES-256-GCM**.
+- Passwords hashed with state-of-the-art **Argon2id**.
+- Consent IP logs pseudonymized via **SHA-256**.
+- Full Data Governance Panel offering **Data Portability** and the **Right to be Forgotten**.
 
 ---
 
-### 2. Subir Toda a Infraestrutura com Docker (PostGIS + Backend)
+## ♿ Standardized Accessibility Criteria (ABNT NBR 9050)
+
+1. **Ramp Access or Level Entrance** (`ENTRANCE_RAMP_LEVEL`)
+2. **Elevator or Lifting Platform** (`ELEVATOR_LIFT`)
+3. **Accessible Bathroom** (`ADAPTED_BATHROOM`)
+4. **Free Circulation & Maneuvering Space** (`MANEUVERING_SPACE`)
+5. **Accessible Tables & Seating** (`ADAPTED_SEATING`)
+6. **Designated Accessible Parking** (`ACCESSIBLE_PARKING`)
+7. **Inclusive & Attentive Customer Service** (`INCLUSIVE_SERVICE`)
+
+---
+
+## 🏗️ Architecture & Tech Stack
+
+- **Frontend**: Flutter 3.24+ (Dart 3.5+), BLoC / Cubit, Clean Architecture, Adaptive Layout (`NavigationRail` on Desktop/Tablet and `NavigationBar` on Mobile).
+- **Backend**: Node.js 20+, Fastify, TypeScript, Prisma ORM, Zod.
+- **Database**: PostgreSQL 16 with PostGIS geospatial extension.
+- **DevOps**: Docker & Docker Compose with automated database migrations and seeding.
+
+---
+
+## 🚀 Getting Started
+
+### 1. Prerequisites
+- [Node.js](https://nodejs.org/) v20+ and `npm`
+- [Docker & Docker Compose](https://www.docker.com/)
+- [Flutter SDK](https://flutter.dev) v3.24+
+
+---
+
+### 2. Fast Launch with Docker (Recommended)
+Spin up the PostGIS database and Fastify backend with a single command:
+
 ```bash
 docker compose up -d --build
 ```
-> Isso iniciará:
-> - **PostgreSQL 16 + PostGIS**: porta `5433` (mapeada para `5432` no container).
-> - **Backend Fastify (TypeScript)**: porta `3333`.
-> - O container do backend aguarda o banco estar saudável, aplica o schema Prisma (`db push`) e realiza o seed inicial dos critérios de acessibilidade de forma 100% automatizada.
-> - **API disponível em**: `http://localhost:3333`
-> - **Documentação OpenAPI/Swagger**: `http://localhost:3333/docs`
+
+The container automatically waits for PostgreSQL health checks, runs `prisma db push`, and executes data seeds.
+
+- **REST API**: `http://localhost:3333`
+- **Swagger / OpenAPI Documentation**: `http://localhost:3333/docs`
+- **PostgreSQL / PostGIS**: port `5433` (mapped to container port `5432`)
 
 ---
 
-### 3. Desenvolvimento Local do Backend (Opcional - sem Docker)
-Caso deseje rodar o backend diretamente no host para desenvolvimento:
+### 3. Running Backend Locally (Without Docker)
 ```bash
 cd backend
 npm install
@@ -36,56 +106,42 @@ npx tsx prisma/seed.ts
 npm run dev
 ```
 
----
-
-### 4. Executar os Testes do Backend (com cobertura >= 80%)
+Run test suite with coverage report (target >= 80%):
 ```bash
-cd backend
 npm run test:coverage
 ```
 
 ---
 
-### 5. Configurar e Iniciar o Frontend Flutter
+### 4. Running the Flutter Frontend
 ```bash
 cd frontend
 flutter pub get
-dart run build_runner build --delete-conflicting-outputs
-flutter run -d chrome # Para web
-# ou: flutter run -d macos / flutter run
+
+# Launch on Web (Chrome)
+flutter run -d chrome
+
+# Launch on macOS Desktop
+flutter run -d macos
+
+# Launch on Mobile Emulator / Physical Device
+flutter run
 ```
 
----
-
-### 6. Executar os Testes do Frontend e Auditoria WCAG
+Run frontend widget & unit tests with WCAG accessibility validation:
 ```bash
-cd frontend
 flutter test --coverage
 ```
 
 ---
 
-## ♿ Critérios Padronizados de Acessibilidade
+## 📜 License & Attribution
 
-O DáPraIr? baseia-se na norma técnica **ABNT NBR 9050** e avalia 7 critérios fundamentais:
-1. **Rampa de Acesso ou Entrada em Nível** (`rampa_acesso`)
-2. **Portas e Vãos Largos** (`porta_larga`)
-3. **Banheiro Acessível Adaptado** (`banheiro_adaptado`)
-4. **Circulação Interna Desobstruída** (`circulacao_interna`)
-5. **Vagas de Estacionamento Reservadas PCD** (`vagas_pcd`)
-6. **Sinalização Visual e Tátil** (`sinalizacao_tatil_visual`)
-7. **Atendimento Prioritário e Cordialidade** (`atendimento_capacitado`)
+This project is licensed under the terms of the **MIT License** — see the [LICENSE](LICENSE) file for complete details.
 
----
+### ⚠️ Attribution & Credit Requirement
+In accordance with the MIT License terms, **you must retain the original copyright notice and give proper credit** whenever using, forking, modifying, or distributing this software or derivatives:
 
-## 🔒 Conformidade LGPD e Privacidade
-- Dados de saúde e necessidades de apoio são armazenados com criptografia simétrica **AES-256-GCM**.
-- Hashes de senhas utilizam o algoritmo **Argon2id**.
-- IPs de consentimento são pseudonimizados com **SHA-256**.
-- Suporte total aos direitos do titular: **Portabilidade** e **Direito ao Esquecimento**.
-
----
-
-## 🛡️ Moderação por Quarentena Automática
-- Conteúdos com **1 a 2 denúncias distintas** recebem o selo público de *"Sob análise da moderação"*.
-- Conteúdos com **3 ou mais denúncias distintas** entram imediatamente em **QUARENTENA** e são ocultados automaticamente de buscas públicas e feeds até decisão da moderação humana.
+- **Original Author**: [João Santiago](https://github.com/joaosantiag0)
+- **Repository**: [https://github.com/joaosantiag0/daPraIr](https://github.com/joaosantiag0/daPraIr)
+- **Project**: DáPraIr? — Physical Accessibility Platform & Social Community

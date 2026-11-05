@@ -1,5 +1,7 @@
 import Fastify, { FastifyInstance } from 'fastify';
 import fastifyCors from '@fastify/cors';
+import fastifyHelmet from '@fastify/helmet';
+import fastifyRateLimit from '@fastify/rate-limit';
 import fastifyMultipart from '@fastify/multipart';
 import fastifySwagger from '@fastify/swagger';
 import fastifySwaggerUi from '@fastify/swagger-ui';
@@ -24,6 +26,18 @@ import { forumRoutes } from './modules/forum/forum.routes.js';
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
     logger: config.NODE_ENV === 'test' ? false : { level: 'info' },
+  });
+
+  // Security HTTP Headers (CSP, HSTS, X-Content-Type-Options, etc.)
+  await app.register(fastifyHelmet, {
+    contentSecurityPolicy: config.NODE_ENV === 'production' ? undefined : false,
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  });
+
+  // Rate Limiting (Brute-force & DoS protection)
+  await app.register(fastifyRateLimit, {
+    max: config.NODE_ENV === 'test' ? 10000 : 300,
+    timeWindow: '1 minute',
   });
 
   // CORS
@@ -111,9 +125,21 @@ export async function buildApp(): Promise<FastifyInstance> {
   // Serve static uploaded media
   app.get('/uploads/*', async (request, reply) => {
     const rawPath = (request.params as any)['*'] || '';
-    const safePath = path.normalize(rawPath).replace(/^(\.\.[\/\\])+/, '');
-    const fullPath = path.resolve(process.cwd(), 'uploads', safePath);
-    if (!fs.existsSync(fullPath)) {
+    const uploadsDir = path.resolve(process.cwd(), 'uploads');
+
+    // Reject traversal patterns immediately with 403 Forbidden
+    if (rawPath.startsWith('/') || rawPath.startsWith('\\') || rawPath.includes('..')) {
+      return reply.status(403).send({ message: 'Acesso proibido: tentativa de travessia de caminho' });
+    }
+
+    const fullPath = path.resolve(uploadsDir, rawPath);
+
+    // Strict boundary enforcement: fullPath must reside strictly inside uploadsDir
+    if (!fullPath.startsWith(uploadsDir + path.sep)) {
+      return reply.status(403).send({ message: 'Acesso proibido: tentativa de travessia de caminho' });
+    }
+
+    if (!fs.existsSync(fullPath) || fs.statSync(fullPath).isDirectory()) {
       return reply.status(404).send({ message: 'Arquivo não encontrado' });
     }
     const ext = path.extname(fullPath).toLowerCase();

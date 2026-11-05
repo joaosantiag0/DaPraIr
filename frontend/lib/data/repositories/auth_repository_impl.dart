@@ -1,13 +1,16 @@
-import 'package:shared_preferences/shared_preferences.dart';
-import '../../core/network/auth_interceptor.dart';
+import '../../core/storage/secure_token_storage.dart';
 import '../../core/network/dio_client.dart';
 import '../../domain/entities/user_profile.dart';
 import '../../domain/repositories/auth_repository.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
   final DioClient dioClient;
+  final SecureTokenStorage tokenStorage;
 
-  AuthRepositoryImpl({required this.dioClient});
+  AuthRepositoryImpl({
+    required this.dioClient,
+    SecureTokenStorage? tokenStorage,
+  }) : tokenStorage = tokenStorage ?? SecureTokenStorage();
 
   @override
   Future<UserProfile> register({
@@ -32,8 +35,7 @@ class AuthRepositoryImpl implements AuthRepository {
     final token = data['token'] as String;
     final userJson = data['user'] as Map<String, dynamic>;
 
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(AuthInterceptor.tokenKey, token);
+    await tokenStorage.saveToken(token);
 
     return UserProfile(
       id: userJson['id'] as String,
@@ -62,8 +64,7 @@ class AuthRepositoryImpl implements AuthRepository {
     final token = data['token'] as String;
     final userJson = data['user'] as Map<String, dynamic>;
 
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(AuthInterceptor.tokenKey, token);
+    await tokenStorage.saveToken(token);
 
     return UserProfile(
       id: userJson['id'] as String,
@@ -77,13 +78,11 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<void> logout() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(AuthInterceptor.tokenKey);
+    await tokenStorage.clearToken();
   }
 
   @override
   Future<String?> getStoredToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(AuthInterceptor.tokenKey);
+    return tokenStorage.getToken();
   }
 }

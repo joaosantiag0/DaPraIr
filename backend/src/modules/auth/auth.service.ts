@@ -88,6 +88,9 @@ export class AuthService {
     };
   }
 
+  // Pre-computed dummy argon2id hash to mitigate timing attacks on non-existent user lookups
+  private static readonly DUMMY_HASH = '$argon2id$v=19$m=19456,t=2,p=1$c29tZXNhbHR2YWx1ZQ$c29tZXNhbHR2YWx1ZQ';
+
   async login(data: LoginDTO) {
     const { email, password } = data;
     const normalizedEmail = email.toLowerCase().trim();
@@ -96,12 +99,13 @@ export class AuthService {
       where: { email: normalizedEmail },
     });
 
-    if (!user || !user.password_hash || user.status !== 'ACTIVE') {
-      throw new UnauthorizedError('Credenciais inválidas ou conta desativada');
-    }
+    const hashToVerify = user && user.password_hash && user.status === 'ACTIVE'
+      ? user.password_hash
+      : AuthService.DUMMY_HASH;
 
-    const isMatch = await CryptoService.verifyPassword(user.password_hash, password);
-    if (!isMatch) {
+    const isMatch = await CryptoService.verifyPassword(hashToVerify, password);
+
+    if (!user || !user.password_hash || user.status !== 'ACTIVE' || !isMatch) {
       throw new UnauthorizedError('Credenciais inválidas');
     }
 

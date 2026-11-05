@@ -3,7 +3,7 @@ import { BadRequestError, NotFoundError } from '../../core/errors/app-error.js';
 
 export interface CreateReportDTO {
   reporterId: string;
-  targetType: 'REVIEW' | 'MESSAGE' | 'USER' | 'EVENT' | 'MEDIA';
+  targetType: 'REVIEW' | 'MESSAGE' | 'USER' | 'EVENT' | 'MEDIA' | 'FORUM_TOPIC' | 'FORUM_COMMENT';
   targetId: string;
   reason: 'INACCURATE_DATA' | 'INAPPROPRIATE_MEDIA' | 'HARASSMENT' | 'SPAM' | 'OTHER';
   details?: string;
@@ -182,6 +182,16 @@ export class ReportsService {
         if (!user) throw new NotFoundError('Usuário não encontrado');
         break;
       }
+      case 'FORUM_TOPIC': {
+        const topic = await prisma.forumTopic.findUnique({ where: { id: targetId } });
+        if (!topic) throw new NotFoundError('Tópico não encontrado');
+        break;
+      }
+      case 'FORUM_COMMENT': {
+        const comment = await prisma.forumComment.findUnique({ where: { id: targetId } });
+        if (!comment) throw new NotFoundError('Comentário não encontrado');
+        break;
+      }
     }
   }
 
@@ -223,6 +233,18 @@ export class ReportsService {
           status: mediaStatus,
           report_count: reportCount,
         },
+      });
+    } else if (targetType === 'FORUM_TOPIC') {
+      const topicStatus = status === 'QUARANTINED' ? 'REMOVED_BY_ADMIN' : (status === 'PUBLISHED' ? 'ACTIVE' : status);
+      await prisma.forumTopic.update({
+        where: { id: targetId },
+        data: { status: topicStatus },
+      });
+    } else if (targetType === 'FORUM_COMMENT') {
+      const commentStatus = status === 'QUARANTINED' ? 'REMOVED_BY_ADMIN' : (status === 'PUBLISHED' ? 'ACTIVE' : status);
+      await prisma.forumComment.update({
+        where: { id: targetId },
+        data: { status: commentStatus },
       });
     }
   }

@@ -5,6 +5,7 @@ import '../../bloc/forum/forum_event.dart';
 import '../../bloc/forum/forum_state.dart';
 import '../../components/forum_category_card.dart';
 import '../../components/forum_topic_tile.dart';
+import '../../components/community_rules_sheet.dart';
 import 'category_topics_view.dart';
 import 'topic_detail_view.dart';
 import 'create_topic_view.dart';
@@ -89,6 +90,11 @@ class _ForumHomeViewState extends State<ForumHomeView> {
         ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.rule_folder_outlined),
+            tooltip: 'Regras da Comunidade',
+            onPressed: () => CommunityRulesSheet.show(context),
+          ),
+          IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Atualizar fórum',
             onPressed: () => context.read<ForumBloc>().add(const LoadForumHomeEvent()),
@@ -116,6 +122,70 @@ class _ForumHomeViewState extends State<ForumHomeView> {
               child: ListView(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 children: [
+                  // Freedom of Discussion & Rules Card
+                  Container(
+                    margin: const EdgeInsets.only(top: 4, bottom: 16),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF0FDF4),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFBBF7D0)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFDCFCE7),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.forum_outlined, color: Color(0xFF15803D), size: 20),
+                            ),
+                            const SizedBox(width: 10),
+                            const Expanded(
+                              child: Text(
+                                'Espaço Livre para Conversar',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF15803D),
+                                ),
+                              ),
+                            ),
+                            TextButton.icon(
+                              onPressed: () => CommunityRulesSheet.show(context),
+                              icon: const Icon(Icons.info_outline, size: 16, color: Color(0xFF15803D)),
+                              label: const Text(
+                                'Regras',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF15803D),
+                                ),
+                              ),
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                minimumSize: const Size(48, 36),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Aqui você pode conversar e debater sobre qualquer assunto que quiser — vivências, rotas, dicas, cotidiano, amizade ou lazer —, desde que respeite as regras de convivência da comunidade.',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Color(0xFF1E293B),
+                            height: 1.4,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
                   // Categories Section Header
                   const Padding(
                     padding: EdgeInsets.only(top: 8, bottom: 12),

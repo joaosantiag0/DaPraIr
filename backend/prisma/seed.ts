@@ -301,6 +301,14 @@ async function main() {
   console.log('🌱 Seeding forum categories and sample public discussions...');
   const forumCategoriesData = [
     {
+      name: 'Conversa Livre & Comunidade',
+      slug: 'conversa-livre',
+      description: 'Espaço aberto para conversar sobre qualquer assunto do dia a dia, trocar ideias e fazer amigos, sempre respeitando as regras da comunidade.',
+      icon_name: 'forum',
+      display_order: 0,
+      is_active: true,
+    },
+    {
       name: 'Mobilidade Urbana',
       slug: 'mobilidade-urbana',
       description: 'Debates sobre calçadas, transporte público, ônibus, metrô e rotas acessíveis nas cidades.',

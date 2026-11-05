@@ -7,6 +7,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../components/accessible_button.dart';
 import '../../components/content_report_dialog.dart';
 import '../../components/responsive_container.dart';
+import '../../components/community_rules_sheet.dart';
 import '../place/place_detail_screen.dart';
 import '../events/event_detail_screen.dart';
 
@@ -41,6 +42,13 @@ class _FeedScreenState extends State<FeedScreen> {
           ],
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.rule_folder_outlined),
+            tooltip: 'Regras da Comunidade',
+            onPressed: () {
+              CommunityRulesSheet.show(context);
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Atualizar feed',

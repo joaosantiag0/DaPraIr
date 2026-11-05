@@ -6,6 +6,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../components/accessible_button.dart';
 import '../../components/accessible_card.dart';
 import '../../components/responsive_container.dart';
+import '../../components/community_rules_sheet.dart';
 import 'chat_conversation_screen.dart';
 
 class SocialConnectionsScreen extends StatefulWidget {
@@ -111,6 +112,13 @@ class _SocialConnectionsScreenState extends State<SocialConnectionsScreen> with 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Comunidade e Amigos'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.rule_folder_outlined),
+            tooltip: 'Regras da Comunidade',
+            onPressed: () => CommunityRulesSheet.show(context),
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           labelColor: Colors.white,
@@ -226,7 +234,7 @@ class _SocialConnectionsScreenState extends State<SocialConnectionsScreen> with 
                               ),
                               const SizedBox(height: 6),
                               const Text(
-                                'Adicione amigos na aba de Sugestões para conversar diretamente sobre rotas e acessibilidade.',
+                                'Adicione amigos na aba de Sugestões para conversar diretamente sobre qualquer assunto, combinar passeios e trocar ideias.',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(color: AppColors.textHint),
                               ),

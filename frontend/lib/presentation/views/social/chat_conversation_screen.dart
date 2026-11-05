@@ -5,6 +5,7 @@ import '../../../core/accessibility/semantics_helper.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../components/accessible_button.dart';
 import '../../components/responsive_container.dart';
+import '../../components/community_rules_sheet.dart';
 
 class ChatConversationScreen extends StatefulWidget {
   final String peerUserId;
@@ -112,23 +113,40 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
         child: Column(
           children: [
             // Security Notice
+          // Security & Rules Notice
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: const BoxDecoration(
               color: AppColors.primaryContainer,
               border: Border(bottom: BorderSide(color: AppColors.borderLight)),
             ),
-            child: const Row(
+            child: Row(
               children: [
-                Icon(Icons.shield_outlined, size: 20, color: AppColors.primaryBlue),
-                SizedBox(width: 10),
-                Expanded(
+                const Icon(Icons.shield_outlined, size: 20, color: AppColors.primaryBlue),
+                const SizedBox(width: 10),
+                const Expanded(
                   child: Text(
-                    'Conversa segura e direta entre amigos verificados no DáPraIr?.',
+                    'Conversa livre e segura: conversem sobre o que quiserem, sempre dentro das regras da comunidade.',
                     style: TextStyle(
                       fontSize: 12,
                       color: AppColors.primaryBlue,
                       fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                GestureDetector(
+                  onTap: () => CommunityRulesSheet.show(context),
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                    child: Text(
+                      'Regras',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.primaryBlue,
+                        fontWeight: FontWeight.bold,
+                        decoration: TextDecoration.underline,
+                      ),
                     ),
                   ),
                 ),
@@ -191,7 +209,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                             ),
                             const SizedBox(height: 6),
                             const Text(
-                              'Envie um "Olá!" para iniciar a conversa sobre acessibilidade.',
+                              'Envie um "Olá!" para conversar sobre o que quiser, trocar ideias ou combinar encontros.',
                               textAlign: TextAlign.center,
                               style: TextStyle(color: AppColors.textHint),
                             ),

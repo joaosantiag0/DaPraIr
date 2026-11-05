@@ -5,6 +5,7 @@ import '../../bloc/forum/forum_event.dart';
 import '../../bloc/forum/forum_state.dart';
 import '../../../domain/entities/forum_category.dart';
 import '../../components/visibility_badge.dart';
+import '../../components/community_rules_sheet.dart';
 
 class CreateTopicView extends StatefulWidget {
   final List<ForumCategory> categories;
@@ -69,6 +70,13 @@ class _CreateTopicViewState extends State<CreateTopicView> {
           'Novo Debate',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.rule_folder_outlined),
+            tooltip: 'Regras da Comunidade',
+            onPressed: () => CommunityRulesSheet.show(context),
+          ),
+        ],
       ),
       body: BlocConsumer<ForumBloc, ForumState>(
         listener: (context, state) {
@@ -94,6 +102,56 @@ class _CreateTopicViewState extends State<CreateTopicView> {
             child: ListView(
               padding: const EdgeInsets.all(20),
               children: [
+                // Community Freedom & Rules Banner
+                Container(
+                  margin: const EdgeInsets.only(bottom: 20),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.chat_bubble_outline_rounded, color: Color(0xFF0284C7), size: 20),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Liberdade para conversar sobre o que quiser!',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF0F172A),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            const Text(
+                              'Você pode propor discussões sobre qualquer tema que desejar — vivências, cultura, lazer ou amizade —, sempre de acordo com as regras de respeito da comunidade.',
+                              style: TextStyle(fontSize: 12, color: Color(0xFF64748B), height: 1.3),
+                            ),
+                            const SizedBox(height: 4),
+                            GestureDetector(
+                              onTap: () => CommunityRulesSheet.show(context),
+                              child: const Text(
+                                'Ver Regras da Comunidade →',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF0284C7),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
                 // Category Picker
                 if (widget.categories.isNotEmpty) ...[
                   const Text(
@@ -160,7 +218,7 @@ class _CreateTopicViewState extends State<CreateTopicView> {
                   controller: _contentController,
                   maxLines: 6,
                   decoration: InputDecoration(
-                    hintText: 'Compartilhe suas observações, experiências e sugestões de acessibilidade...',
+                    hintText: 'Escreva sobre o que quiser: experiências, dicas, dúvidas, histórias do dia a dia...',
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                     contentPadding: const EdgeInsets.all(16),
                   ),

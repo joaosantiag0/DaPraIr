@@ -8,7 +8,6 @@ import '../events/events_list_screen.dart';
 import '../social/social_connections_screen.dart';
 import '../profile/profile_privacy_settings_screen.dart';
 import '../forum/forum_home_view.dart';
-import '../gamification/leaderboard_view.dart';
 import '../auth/login_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
@@ -51,7 +50,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             isAuthenticated: isAuthenticated,
             onNavigateToLogin: _onNavigateToLogin,
           ),
-          const LeaderboardView(),
           SocialConnectionsScreen(
             isAuthenticated: isAuthenticated,
             onNavigateToLogin: _onNavigateToLogin,
@@ -144,11 +142,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                             label: Text('Debates'),
                           ),
                           NavigationRailDestination(
-                            icon: Icon(Icons.leaderboard_outlined),
-                            selectedIcon: Icon(Icons.leaderboard),
-                            label: Text('Ranking'),
-                          ),
-                          NavigationRailDestination(
                             icon: Icon(Icons.people_outline),
                             selectedIcon: Icon(Icons.people),
                             label: Text('Social'),
@@ -210,12 +203,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                         selectedIcon: Icon(Icons.forum),
                         label: 'Debates',
                         tooltip: 'Espaço de debate e fórum de tópicos',
-                      ),
-                      NavigationDestination(
-                        icon: Icon(Icons.leaderboard_outlined),
-                        selectedIcon: Icon(Icons.leaderboard),
-                        label: 'Ranking',
-                        tooltip: 'Ranking e colaboradores da comunidade',
                       ),
                       NavigationDestination(
                         icon: Icon(Icons.people_outline),

@@ -9,6 +9,7 @@ import '../../components/responsive_container.dart';
 import 'account_data_governance_screen.dart';
 import 'blocked_contacts_screen.dart';
 import '../admin/admin_dashboard_view.dart';
+import '../gamification/leaderboard_view.dart';
 
 class ProfilePrivacySettingsScreen extends StatefulWidget {
   final bool isAuthenticated;
@@ -316,6 +317,68 @@ class _ProfilePrivacySettingsScreenState extends State<ProfilePrivacySettingsScr
                     return const SizedBox.shrink();
                   },
                 ),
+
+                // Ranking & Gamification Entry
+                Card(
+                  elevation: 0.5,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    side: const BorderSide(color: AppColors.borderLight, width: 1.2),
+                  ),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const LeaderboardView(),
+                        ),
+                      );
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: AppColors.underReviewLight,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(
+                              Icons.leaderboard_rounded,
+                              color: AppColors.underReviewYellow,
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Ranking de Colaboradores',
+                                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  'Veja as pontuações, insígnias e o ranking da comunidade',
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                        color: AppColors.textSecondary,
+                                      ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.chevron_right, color: AppColors.textHint),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
 
                 // Link to Blocked Contacts screen
                 Card(

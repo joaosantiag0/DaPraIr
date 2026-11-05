@@ -429,7 +429,109 @@ async function main() {
     }
   }
 
-  console.log('✅ Accessibility criteria, places, reviews, events and forum seeded successfully!');
+  console.log('🌱 Seeding gamification levels and sample user profiles...');
+  const GAMIFICATION_LEVELS = [
+    {
+      id: 'EXPLORER',
+      name: 'Explorador(a) Iniciante',
+      min_points: 0,
+      level_order: 1,
+      badge_icon_url: '/badges/explorer.png',
+      description: 'Primeiros passos na comunidade DáPraIr? descobrindo locais e dicas.',
+    },
+    {
+      id: 'COLLABORATOR',
+      name: 'Colaborador(a) Ativo',
+      min_points: 100,
+      level_order: 2,
+      badge_icon_url: '/badges/collaborator.png',
+      description: 'Contribui regularmente com avaliações e dicas de acessibilidade física.',
+    },
+    {
+      id: 'MAPPER',
+      name: 'Mapeador(a) de Acessibilidade',
+      min_points: 300,
+      level_order: 3,
+      badge_icon_url: '/badges/mapper.png',
+      description: 'Referência em mapear e registrar fotos comprobatórias de rampas e banheiros.',
+    },
+    {
+      id: 'SPECIALIST',
+      name: 'Especialista Comunitário',
+      min_points: 700,
+      level_order: 4,
+      badge_icon_url: '/badges/specialist.png',
+      description: 'Alto engajamento, apoio a outros membros e debates resolutivos.',
+    },
+    {
+      id: 'AMBASSADOR',
+      name: 'Embaixador(a) da Acessibilidade',
+      min_points: 1500,
+      level_order: 5,
+      badge_icon_url: '/badges/ambassador.png',
+      description: 'Pilar da comunidade DáPraIr? e guardião da acessibilidade urbana inclusiva.',
+    },
+  ];
+
+  for (const level of GAMIFICATION_LEVELS) {
+    await prisma.gamificationLevel.upsert({
+      where: { id: level.id },
+      update: level,
+      create: level,
+    });
+  }
+
+  // Seed initial profiles for sample users
+  if (juUser) {
+    await prisma.userGamificationProfile.upsert({
+      where: { user_id: juUser.id },
+      update: {},
+      create: {
+        user_id: juUser.id,
+        points_total: 420,
+        points_current: 420,
+        current_level_id: 'MAPPER',
+        is_ranking_visible: true,
+        use_anonymous_nickname: false,
+      },
+    });
+
+    await prisma.gamificationTransaction.upsert({
+      where: {
+        user_id_action_type_source_id: {
+          user_id: juUser.id,
+          action_type: 'AVALIACAO_LOCAL',
+          source_id: '00000000-0000-0000-0000-000000000001',
+        },
+      },
+      update: {},
+      create: {
+        user_id: juUser.id,
+        action_type: 'AVALIACAO_LOCAL',
+        points: 35,
+        source_id: '00000000-0000-0000-0000-000000000001',
+        source_type: 'REVIEW',
+        description: 'Avaliação detalhada com fotos de acessibilidade',
+      },
+    });
+  }
+
+  if (marcosUser) {
+    await prisma.userGamificationProfile.upsert({
+      where: { user_id: marcosUser.id },
+      update: {},
+      create: {
+        user_id: marcosUser.id,
+        points_total: 180,
+        points_current: 180,
+        current_level_id: 'COLLABORATOR',
+        is_ranking_visible: true,
+        use_anonymous_nickname: false,
+      },
+    });
+  }
+
+  console.log('✅ Accessibility criteria, places, reviews, events, forum and gamification seeded successfully!');
 }
 
 main()

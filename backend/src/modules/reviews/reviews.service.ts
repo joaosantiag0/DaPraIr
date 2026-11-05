@@ -1,5 +1,6 @@
 import { prisma } from '../../core/database/prisma.js';
 import { NotFoundError, BadRequestError } from '../../core/errors/app-error.js';
+import { gamificationService } from '../gamification/gamification.service.js';
 
 export interface RatingInput {
   criterionCode: string;
@@ -115,6 +116,37 @@ export class ReviewsService {
 
       return newReview;
     });
+
+    // Award gamification points asynchronously / non-blocking
+    try {
+      // Base review points (+15)
+      await gamificationService.awardPoints({
+        userId,
+        actionType: 'AVALIACAO_LOCAL',
+        points: 15,
+        sourceId: review.id,
+        sourceType: 'REVIEW',
+        description: `Avaliação de acessibilidade: ${place.name}`,
+      });
+
+      // Bonus photo points (+10 per photo, up to 3 photos / max 30)
+      if (mediaIds.length > 0) {
+        const photoBonusCount = Math.min(mediaIds.length, 3);
+        for (let i = 0; i < photoBonusCount; i++) {
+          await gamificationService.awardPoints({
+            userId,
+            actionType: 'BONUS_FOTO',
+            points: 10,
+            sourceId: mediaIds[i],
+            sourceType: 'MEDIA',
+            description: `Foto comprobatória de acessibilidade em ${place.name}`,
+          });
+        }
+      }
+    } catch (err) {
+      // Gamification failure should not break review creation
+      console.error('Failed to award gamification points for review:', err);
+    }
 
     return this.getReviewById(review.id);
   }

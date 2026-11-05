@@ -1,0 +1,310 @@
+openapi: 3.1.0
+info:
+  title: DáPraIr? Gamificação e Ranking API
+  version: 1.0.0
+  description: Endpoints REST para extrato de pontos, níveis, ranking multi-período e preferências de privacidade de gamificação.
+paths:
+  /api/v1/gamification/leaderboard:
+    get:
+      summary: Consultar ranking de usuários por janela temporal
+      description: Retorna a lista paginada dos usuários líderes na janela temporal escolhida (semanal, mensal ou geral). Aberto para visitantes (modo convidado) e destaca a posição relativa do usuário quando autenticado.
+      parameters:
+        - name: period
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [weekly, monthly, all_time]
+            default: monthly
+          description: Janela temporal do ranking.
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+      responses:
+        '200':
+          description: Ranking recuperado com sucesso.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - period
+                  - total_participants
+                  - leaderboard
+                properties:
+                  period:
+                    type: string
+                    example: monthly
+                  total_participants:
+                    type: integer
+                    example: 342
+                  user_rank:
+                    type: object
+                    nullable: true
+                    properties:
+                      rank:
+                        type: integer
+                        example: 14
+                      points:
+                        type: integer
+                        example: 185
+                      next_rank_points_diff:
+                        type: integer
+                        example: 15
+                  leaderboard:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LeaderboardEntry'
+
+  /api/v1/gamification/profile:
+    get:
+      summary: Consultar perfil e saldo de gamificação do usuário atual
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Perfil e saldo de gamificação do usuário.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GamificationProfile'
+        '401':
+          description: Usuário não autenticado.
+
+  /api/v1/gamification/transactions:
+    get:
+      summary: Extrato detalhado de transações de pontos
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Extrato de transações paginado.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - transactions
+                  - total
+                  - page
+                  - limit
+                properties:
+                  transactions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/GamificationTransaction'
+                  total:
+                    type: integer
+                    example: 45
+                  page:
+                    type: integer
+                    example: 1
+                  limit:
+                    type: integer
+                    example: 20
+
+  /api/v1/gamification/preferences:
+    put:
+      summary: Atualizar preferências de privacidade de gamificação (LGPD)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                is_ranking_visible:
+                  type: boolean
+                  description: Se falso, oculta o usuário integralmente do ranking público.
+                  example: true
+                use_anonymous_nickname:
+                  type: boolean
+                  description: Se verdadeiro, exibe pseudônimo em vez do nome real.
+                  example: false
+                custom_nickname:
+                  type: string
+                  nullable: true
+                  maxLength: 50
+                  example: MapeadorNoturno
+      responses:
+        '200':
+          description: Preferências atualizadas com sucesso.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GamificationProfile'
+
+  /api/v1/gamification/levels:
+    get:
+      summary: Listar catálogo de níveis e insígnias
+      responses:
+        '200':
+          description: Lista de níveis da plataforma.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GamificationLevel'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    LeaderboardEntry:
+      type: object
+      required:
+        - rank
+        - user_id
+        - display_name
+        - points
+        - level_name
+      properties:
+        rank:
+          type: integer
+          example: 1
+        user_id:
+          type: string
+          format: uuid
+        display_name:
+          type: string
+          example: Ana Silva
+        avatar_url:
+          type: string
+          nullable: true
+          example: https://daprair.app/avatars/user-1.webp
+        points:
+          type: integer
+          example: 420
+        level_name:
+          type: string
+          example: Mapeador(a) de Acessibilidade
+        level_id:
+          type: string
+          example: MAPPER
+        badge_icon:
+          type: string
+          example: https://daprair.app/badges/mapper.png
+
+    GamificationProfile:
+      type: object
+      required:
+        - points_total
+        - points_current
+        - current_level
+        - is_ranking_visible
+        - use_anonymous_nickname
+      properties:
+        points_total:
+          type: integer
+          example: 350
+        points_current:
+          type: integer
+          example: 350
+        current_level:
+          $ref: '#/components/schemas/GamificationLevel'
+        next_level:
+          $ref: '#/components/schemas/GamificationLevel'
+          nullable: true
+        points_to_next_level:
+          type: integer
+          example: 350
+        is_ranking_visible:
+          type: boolean
+          example: true
+        use_anonymous_nickname:
+          type: boolean
+          example: false
+        custom_nickname:
+          type: string
+          nullable: true
+
+    GamificationTransaction:
+      type: object
+      required:
+        - id
+        - action_type
+        - points
+        - description
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        action_type:
+          type: string
+          example: AVALIACAO_LOCAL
+        points:
+          type: integer
+          example: 15
+        description:
+          type: string
+          example: Avaliação completa de acessibilidade do Restaurante Sabor & Arte
+        source_id:
+          type: string
+          format: uuid
+          nullable: true
+        source_type:
+          type: string
+          nullable: true
+          example: REVIEW
+        created_at:
+          type: string
+          format: date-time
+
+    GamificationLevel:
+      type: object
+      required:
+        - id
+        - name
+        - min_points
+        - level_order
+      properties:
+        id:
+          type: string
+          example: MAPPER
+        name:
+          type: string
+          example: Mapeador(a) de Acessibilidade
+        min_points:
+          type: integer
+          example: 300
+        level_order:
+          type: integer
+          example: 3
+        badge_icon_url:
+          type: string
+          nullable: true
+        description:
+          type: string
+          example: Referência em mapear locais acessíveis com fotos

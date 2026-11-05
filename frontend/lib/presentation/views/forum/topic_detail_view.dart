@@ -33,11 +33,20 @@ class _TopicDetailViewState extends State<TopicDetailView> {
   final FocusNode _commentFocusNode = FocusNode();
   ForumComment? _replyTarget;
   String _selectedVisibility = 'PUBLIC';
+  TopicDetailLoaded? _cachedTopicDetail;
 
   @override
   void initState() {
     super.initState();
     context.read<ForumBloc>().add(LoadTopicDetailEvent(topicId: widget.topicId));
+  }
+
+  @override
+  void didUpdateWidget(covariant TopicDetailView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isAuthenticated != widget.isAuthenticated) {
+      context.read<ForumBloc>().add(LoadTopicDetailEvent(topicId: widget.topicId));
+    }
   }
 
   @override
@@ -281,12 +290,16 @@ class _TopicDetailViewState extends State<TopicDetailView> {
           }
         },
         builder: (context, state) {
-          if (state is TopicDetailLoading) {
-            return const Center(child: CircularProgressIndicator());
+          if (state is TopicDetailLoaded && state.topic.id == widget.topicId) {
+            _cachedTopicDetail = state;
           }
 
-          if (state is TopicDetailLoaded) {
-            final topic = state.topic;
+          final detailData = (state is TopicDetailLoaded && state.topic.id == widget.topicId)
+              ? state
+              : _cachedTopicDetail;
+
+          if (detailData != null) {
+            final topic = detailData.topic;
             final isTopicAuthor = currentUserId != null && currentUserId == topic.authorId;
 
             return Column(
@@ -448,7 +461,7 @@ class _TopicDetailViewState extends State<TopicDetailView> {
                           const Icon(Icons.forum_outlined, size: 20, color: Color(0xFF0D47A1)),
                           const SizedBox(width: 8),
                           Text(
-                            'Respostas e Subthreads (${state.comments.length})',
+                            'Respostas e Subthreads (${detailData.comments.length})',
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -460,7 +473,7 @@ class _TopicDetailViewState extends State<TopicDetailView> {
                       const SizedBox(height: 12),
 
                       // Comments Tree
-                      if (state.comments.isEmpty)
+                      if (detailData.comments.isEmpty)
                         const Padding(
                           padding: EdgeInsets.symmetric(vertical: 24),
                           child: Center(
@@ -471,10 +484,10 @@ class _TopicDetailViewState extends State<TopicDetailView> {
                           ),
                         )
                       else
-                        ...state.comments.map(
+                        ...detailData.comments.map(
                           (c) => ForumCommentThread(
                             comment: c,
-                            collapsedCommentIds: state.collapsedCommentIds,
+                            collapsedCommentIds: detailData.collapsedCommentIds,
                             onToggleCollapse: (commentId) {
                               context.read<ForumBloc>().add(ToggleSubthreadCollapseEvent(commentId: commentId));
                             },
@@ -585,12 +598,28 @@ class _TopicDetailViewState extends State<TopicDetailView> {
             );
           }
 
-          return Center(
-            child: ElevatedButton(
-              onPressed: () => context.read<ForumBloc>().add(LoadTopicDetailEvent(topicId: widget.topicId)),
-              child: const Text('Carregar Detalhes'),
-            ),
-          );
+          if (state is ForumError) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                  const SizedBox(height: 12),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Text(state.message, textAlign: TextAlign.center),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => context.read<ForumBloc>().add(LoadTopicDetailEvent(topicId: widget.topicId)),
+                    child: const Text('Tentar Novamente'),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          return const Center(child: CircularProgressIndicator());
         },
       ),
     );

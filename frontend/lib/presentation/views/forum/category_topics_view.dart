@@ -31,11 +31,20 @@ class CategoryTopicsView extends StatefulWidget {
 class _CategoryTopicsViewState extends State<CategoryTopicsView> {
   String _selectedSort = 'recent';
   final TextEditingController _searchController = TextEditingController();
+  CategoryTopicsLoaded? _cachedTopicsData;
 
   @override
   void initState() {
     super.initState();
     _loadTopics();
+  }
+
+  @override
+  void didUpdateWidget(covariant CategoryTopicsView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isAuthenticated != widget.isAuthenticated) {
+      _loadTopics();
+    }
   }
 
   void _loadTopics() {
@@ -72,6 +81,120 @@ class _CategoryTopicsViewState extends State<CategoryTopicsView> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _openCreateTopic() async {
+    if (!widget.isAuthenticated) {
+      _onRequireLogin('abrir novos debates');
+      return;
+    }
+
+    await CommunityRulesSheet.ensureAcknowledged(context);
+    if (!mounted) return;
+
+    final singleCat = ForumCategory(
+      id: widget.categoryId,
+      name: widget.categoryName,
+      slug: widget.categoryName.toLowerCase().replaceAll(' ', '-'),
+      description: '',
+      iconName: 'forum',
+      displayOrder: 0,
+      isActive: true,
+      topicsCount: 0,
+    );
+
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => BlocProvider.value(
+          value: context.read<ForumBloc>(),
+          child: CreateTopicView(
+            categories: [singleCat],
+            preselectedCategoryId: widget.categoryId,
+          ),
+        ),
+      ),
+    );
+    if (mounted) {
+      _loadTopics();
+    }
+  }
+
+  Widget _buildSortChip(String sortKey, String label, IconData icon) {
+    final isSelected = _selectedSort == sortKey;
+    return ChoiceChip(
+      avatar: Icon(icon, size: 16, color: isSelected ? Colors.white : const Color(0xFF334155)),
+      label: Text(label),
+      selected: isSelected,
+      selectedColor: const Color(0xFF0D47A1),
+      labelStyle: TextStyle(
+        color: isSelected ? Colors.white : const Color(0xFF334155),
+        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+      ),
+      onSelected: (_) => _onSortChanged(sortKey),
+    );
+  }
+
+  Widget _buildTopicsList(BuildContext context, CategoryTopicsLoaded data) {
+    if (data.topics.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.forum_outlined, size: 48, color: Color(0xFF94A3B8)),
+            const SizedBox(height: 12),
+            const Text(
+              'Nenhum debate encontrado nesta categoria.',
+              style: TextStyle(fontSize: 16, color: Color(0xFF64748B)),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: () => _openCreateTopic(),
+              icon: const Icon(Icons.add),
+              label: const Text('Iniciar o Primeiro Debate'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: () async => _loadTopics(),
+      child: ListView.separated(
+        padding: const EdgeInsets.all(16),
+        itemCount: data.topics.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 12),
+        itemBuilder: (context, index) {
+          final topic = data.topics[index];
+          return ForumTopicTile(
+            topic: topic,
+            onTap: () async {
+              await Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => BlocProvider.value(
+                    value: context.read<ForumBloc>(),
+                    child: TopicDetailView(
+                      topicId: topic.id,
+                      isAuthenticated: widget.isAuthenticated,
+                      onNavigateToLogin: widget.onNavigateToLogin,
+                    ),
+                  ),
+                ),
+              );
+              if (mounted) {
+                _loadTopics();
+              }
+            },
+            onLikeTap: () {
+              if (!widget.isAuthenticated) {
+                _onRequireLogin('curtir debates');
+              } else {
+                context.read<ForumBloc>().add(ToggleTopicLikeEvent(topicId: topic.id));
+              }
+            },
+          );
+        },
+      ),
+    );
   }
 
   @override
@@ -145,76 +268,40 @@ class _CategoryTopicsViewState extends State<CategoryTopicsView> {
                 }
               },
               builder: (context, state) {
-                if (state is CategoryTopicsLoading) {
-                  return const Center(child: CircularProgressIndicator());
+                if (state is CategoryTopicsLoaded && state.categoryId == widget.categoryId) {
+                  _cachedTopicsData = state;
                 }
 
-                if (state is CategoryTopicsLoaded) {
-                  if (state.topics.isEmpty) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.forum_outlined, size: 48, color: Color(0xFF94A3B8)),
-                          const SizedBox(height: 12),
-                          const Text(
-                            'Nenhum debate encontrado nesta categoria.',
-                            style: TextStyle(fontSize: 16, color: Color(0xFF64748B)),
-                          ),
-                          const SizedBox(height: 16),
-                          ElevatedButton.icon(
-                            onPressed: () => _openCreateTopic(),
-                            icon: const Icon(Icons.add),
-                            label: const Text('Iniciar o Primeiro Debate'),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
+                final topicsData = (state is CategoryTopicsLoaded && state.categoryId == widget.categoryId)
+                    ? state
+                    : _cachedTopicsData;
 
-                  return RefreshIndicator(
-                    onRefresh: () async => _loadTopics(),
-                    child: ListView.separated(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: state.topics.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 12),
-                      itemBuilder: (context, index) {
-                        final topic = state.topics[index];
-                        return ForumTopicTile(
-                          topic: topic,
-                          onTap: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => BlocProvider.value(
-                                  value: context.read<ForumBloc>(),
-                                  child: TopicDetailView(
-                                    topicId: topic.id,
-                                    isAuthenticated: widget.isAuthenticated,
-                                    onNavigateToLogin: widget.onNavigateToLogin,
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                          onLikeTap: () {
-                            if (!widget.isAuthenticated) {
-                              _onRequireLogin('curtir debates');
-                            } else {
-                              context.read<ForumBloc>().add(ToggleTopicLikeEvent(topicId: topic.id));
-                            }
-                          },
-                        );
-                      },
+                if (topicsData != null) {
+                  return _buildTopicsList(context, topicsData);
+                }
+
+                if (state is ForumError) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                        const SizedBox(height: 12),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          child: Text(state.message, textAlign: TextAlign.center),
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: _loadTopics,
+                          child: const Text('Tentar Novamente'),
+                        ),
+                      ],
                     ),
                   );
                 }
 
-                return Center(
-                  child: ElevatedButton(
-                    onPressed: _loadTopics,
-                    child: const Text('Carregar Debates'),
-                  ),
-                );
+                return const Center(child: CircularProgressIndicator());
               },
             ),
           ),
@@ -229,54 +316,6 @@ class _CategoryTopicsViewState extends State<CategoryTopicsView> {
           label: const Text('Novo Debate'),
         ),
       ),
-    );
-  }
-
-  void _openCreateTopic() async {
-    if (!widget.isAuthenticated) {
-      _onRequireLogin('abrir novos debates');
-      return;
-    }
-
-    await CommunityRulesSheet.ensureAcknowledged(context);
-    if (!mounted) return;
-
-    final singleCat = ForumCategory(
-      id: widget.categoryId,
-      name: widget.categoryName,
-      slug: widget.categoryName.toLowerCase().replaceAll(' ', '-'),
-      description: '',
-      iconName: 'forum',
-      displayOrder: 0,
-      isActive: true,
-      topicsCount: 0,
-    );
-
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => BlocProvider.value(
-          value: context.read<ForumBloc>(),
-          child: CreateTopicView(
-            categories: [singleCat],
-            preselectedCategoryId: widget.categoryId,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSortChip(String sortKey, String label, IconData icon) {
-    final isSelected = _selectedSort == sortKey;
-    return ChoiceChip(
-      avatar: Icon(icon, size: 16, color: isSelected ? Colors.white : const Color(0xFF334155)),
-      label: Text(label),
-      selected: isSelected,
-      selectedColor: const Color(0xFF0D47A1),
-      labelStyle: TextStyle(
-        color: isSelected ? Colors.white : const Color(0xFF334155),
-        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-      ),
-      onSelected: (_) => _onSortChanged(sortKey),
     );
   }
 }

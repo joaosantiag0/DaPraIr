@@ -25,14 +25,24 @@ class ForumHomeView extends StatefulWidget {
 }
 
 class _ForumHomeViewState extends State<ForumHomeView> {
+  ForumHomeLoaded? _cachedHomeData;
+
   @override
   void initState() {
     super.initState();
     context.read<ForumBloc>().add(const LoadForumHomeEvent());
   }
 
-  void _onCategoryTap(String categoryId, String categoryName) {
-    Navigator.of(context).push(
+  @override
+  void didUpdateWidget(covariant ForumHomeView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isAuthenticated != widget.isAuthenticated) {
+      context.read<ForumBloc>().add(const LoadForumHomeEvent());
+    }
+  }
+
+  void _onCategoryTap(String categoryId, String categoryName) async {
+    await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => BlocProvider.value(
           value: context.read<ForumBloc>(),
@@ -45,10 +55,13 @@ class _ForumHomeViewState extends State<ForumHomeView> {
         ),
       ),
     );
+    if (mounted) {
+      context.read<ForumBloc>().add(const LoadForumHomeEvent());
+    }
   }
 
-  void _onTopicTap(String topicId) {
-    Navigator.of(context).push(
+  void _onTopicTap(String topicId) async {
+    await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => BlocProvider.value(
           value: context.read<ForumBloc>(),
@@ -60,6 +73,9 @@ class _ForumHomeViewState extends State<ForumHomeView> {
         ),
       ),
     );
+    if (mounted) {
+      context.read<ForumBloc>().add(const LoadForumHomeEvent());
+    }
   }
 
   void _onOpenCreateTopic(List<dynamic> categories) async {
@@ -71,7 +87,7 @@ class _ForumHomeViewState extends State<ForumHomeView> {
     await CommunityRulesSheet.ensureAcknowledged(context);
     if (!mounted) return;
 
-    Navigator.of(context).push(
+    await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => BlocProvider.value(
           value: context.read<ForumBloc>(),
@@ -80,6 +96,148 @@ class _ForumHomeViewState extends State<ForumHomeView> {
           ),
         ),
       ),
+    );
+    if (mounted) {
+      context.read<ForumBloc>().add(const LoadForumHomeEvent());
+    }
+  }
+
+  Widget _buildForumContent(BuildContext context, ForumHomeLoaded data) {
+    return ListView(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      children: [
+        // Freedom of Discussion & Rules Card
+        Container(
+          margin: const EdgeInsets.only(top: 4, bottom: 16),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF0FDF4),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFBBF7D0)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFDCFCE7),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.forum_outlined, color: Color(0xFF15803D), size: 20),
+                  ),
+                  const SizedBox(width: 10),
+                  const Expanded(
+                    child: Text(
+                      'Espaço Livre para Conversar',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF15803D),
+                      ),
+                    ),
+                  ),
+                  TextButton.icon(
+                    onPressed: () => CommunityRulesSheet.show(context),
+                    icon: const Icon(Icons.info_outline, size: 16, color: Color(0xFF15803D)),
+                    label: const Text(
+                      'Regras',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF15803D),
+                      ),
+                    ),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      minimumSize: const Size(48, 36),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Aqui você pode conversar e debater sobre qualquer assunto que quiser — vivências, rotas, dicas, cotidiano, amizade ou lazer —, desde que respeite as regras de convivência da comunidade.',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Color(0xFF1E293B),
+                  height: 1.4,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Categories Section Header
+        const Padding(
+          padding: EdgeInsets.only(top: 8, bottom: 12),
+          child: Text(
+            'Categorias Temáticas',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF0F172A),
+            ),
+          ),
+        ),
+
+        // Categories List
+        ...data.categories.map(
+          (cat) => Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: ForumCategoryCard(
+              category: cat,
+              onTap: () => _onCategoryTap(cat.id, cat.name),
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 16),
+
+        // Highlighted Topics Section Header
+        const Padding(
+          padding: EdgeInsets.only(top: 8, bottom: 12),
+          child: Text(
+            'Discussões Recentes',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF0F172A),
+            ),
+          ),
+        ),
+
+        // Highlighted Topics List
+        if (data.highlightedTopics.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 20),
+            child: Center(
+              child: Text(
+                'Nenhuma discussão recente encontrada.',
+                style: TextStyle(color: Color(0xFF64748B)),
+              ),
+            ),
+          )
+        else
+          ...data.highlightedTopics.map(
+            (t) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: ForumTopicTile(
+                topic: t,
+                onTap: () => _onTopicTap(t.id),
+                onLikeTap: () {
+                  if (!widget.isAuthenticated && widget.onNavigateToLogin != null) {
+                    widget.onNavigateToLogin!();
+                  } else {
+                    context.read<ForumBloc>().add(ToggleTopicLikeEvent(topicId: t.id));
+                  }
+                },
+              ),
+            ),
+          ),
+      ],
     );
   }
 
@@ -108,165 +266,49 @@ class _ForumHomeViewState extends State<ForumHomeView> {
           }
         },
         builder: (context, state) {
-          if (state is ForumHomeLoading) {
-            return const Center(child: CircularProgressIndicator());
+          if (state is ForumHomeLoaded) {
+            _cachedHomeData = state;
           }
 
-          if (state is ForumHomeLoaded) {
+          final homeData = state is ForumHomeLoaded ? state : _cachedHomeData;
+
+          if (homeData != null) {
             return RefreshIndicator(
               onRefresh: () async {
                 context.read<ForumBloc>().add(const LoadForumHomeEvent());
               },
-              child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: _buildForumContent(context, homeData),
+            );
+          }
+
+          if (state is ForumError) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Freedom of Discussion & Rules Card
-                  Container(
-                    margin: const EdgeInsets.only(top: 4, bottom: 16),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF0FDF4),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFFBBF7D0)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: const BoxDecoration(
-                                color: Color(0xFFDCFCE7),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(Icons.forum_outlined, color: Color(0xFF15803D), size: 20),
-                            ),
-                            const SizedBox(width: 10),
-                            const Expanded(
-                              child: Text(
-                                'Espaço Livre para Conversar',
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF15803D),
-                                ),
-                              ),
-                            ),
-                            TextButton.icon(
-                              onPressed: () => CommunityRulesSheet.show(context),
-                              icon: const Icon(Icons.info_outline, size: 16, color: Color(0xFF15803D)),
-                              label: const Text(
-                                'Regras',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF15803D),
-                                ),
-                              ),
-                              style: TextButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                minimumSize: const Size(48, 36),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'Aqui você pode conversar e debater sobre qualquer assunto que quiser — vivências, rotas, dicas, cotidiano, amizade ou lazer —, desde que respeite as regras de convivência da comunidade.',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Color(0xFF1E293B),
-                            height: 1.4,
-                          ),
-                        ),
-                      ],
-                    ),
+                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                  const SizedBox(height: 12),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Text(state.message, textAlign: TextAlign.center),
                   ),
-
-                  // Categories Section Header
-                  const Padding(
-                    padding: EdgeInsets.only(top: 8, bottom: 12),
-                    child: Text(
-                      'Categorias Temáticas',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF0F172A),
-                      ),
-                    ),
-                  ),
-
-                  // Categories List
-                  ...state.categories.map(
-                    (cat) => Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: ForumCategoryCard(
-                        category: cat,
-                        onTap: () => _onCategoryTap(cat.id, cat.name),
-                      ),
-                    ),
-                  ),
-
                   const SizedBox(height: 16),
-
-                  // Highlighted Topics Section Header
-                  const Padding(
-                    padding: EdgeInsets.only(top: 8, bottom: 12),
-                    child: Text(
-                      'Discussões Recentes',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF0F172A),
-                      ),
-                    ),
+                  ElevatedButton(
+                    onPressed: () => context.read<ForumBloc>().add(const LoadForumHomeEvent()),
+                    child: const Text('Tentar Novamente'),
                   ),
-
-                  // Highlighted Topics List
-                  if (state.highlightedTopics.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 20),
-                      child: Center(
-                        child: Text(
-                          'Nenhuma discussão recente encontrada.',
-                          style: TextStyle(color: Color(0xFF64748B)),
-                        ),
-                      ),
-                    )
-                  else
-                    ...state.highlightedTopics.map(
-                      (t) => Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: ForumTopicTile(
-                          topic: t,
-                          onTap: () => _onTopicTap(t.id),
-                          onLikeTap: () {
-                            if (!widget.isAuthenticated && widget.onNavigateToLogin != null) {
-                              widget.onNavigateToLogin!();
-                            } else {
-                              context.read<ForumBloc>().add(ToggleTopicLikeEvent(topicId: t.id));
-                            }
-                          },
-                        ),
-                      ),
-                    ),
                 ],
               ),
             );
           }
 
-          return Center(
-            child: ElevatedButton(
-              onPressed: () => context.read<ForumBloc>().add(const LoadForumHomeEvent()),
-              child: const Text('Carregar Fórum'),
-            ),
-          );
+          return const Center(child: CircularProgressIndicator());
         },
       ),
       floatingActionButton: BlocBuilder<ForumBloc, ForumState>(
         builder: (context, state) {
-          final categories = state is ForumHomeLoaded ? state.categories : [];
+          final homeData = state is ForumHomeLoaded ? state : _cachedHomeData;
+          final categories = homeData?.categories ?? [];
           return Semantics(
             button: true,
             label: 'Abrir novo debate no fórum',

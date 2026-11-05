@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'auth_interceptor.dart';
+import 'dio_client.dart';
+import '../storage/secure_token_storage.dart';
 
 typedef SessionRevokedCallback = void Function(String message);
 
@@ -8,11 +9,11 @@ class AdminApiClient {
   final Dio _dio;
   static SessionRevokedCallback? onSessionRevoked;
 
-  AdminApiClient({Dio? dio, String baseUrl = 'http://localhost:3000/api/v1'})
+  AdminApiClient({Dio? dio, String? baseUrl})
       : _dio = dio ??
             Dio(
               BaseOptions(
-                baseUrl: baseUrl,
+                baseUrl: baseUrl ?? '${DioClient.defaultBaseUrl}/api/v1',
                 connectTimeout: const Duration(seconds: 10),
                 receiveTimeout: const Duration(seconds: 10),
                 headers: {
@@ -33,8 +34,7 @@ class AdminApiClient {
                 : 'Sessão expirada.';
 
             // Remove stored token
-            final prefs = await SharedPreferences.getInstance();
-            await prefs.remove(AuthInterceptor.tokenKey);
+            await SecureTokenStorage().clearToken();
 
             if (isRevoked) {
               onSessionRevoked?.call(message);

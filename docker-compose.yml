@@ -41,7 +41,7 @@ services:
       S3_BUCKET_NAME: daprair-media
       S3_REGION: us-east-1
       S3_FORCE_PATH_STYLE: "true"
-      GOOGLE_PLACES_API_KEY: ${GOOGLE_PLACES_API_KEY:-AIzaSyC7PM1cEYKk_SjdlIlezGVcIi_ybO1yOq0}
+      GOOGLE_PLACES_API_KEY: ${GOOGLE_PLACES_API_KEY:-}
     volumes:
       - uploads_data:/app/uploads
     healthcheck:

@@ -41,8 +41,9 @@ export async function mediaRoutes(app: FastifyInstance) {
       const altText = (data.fields.altText as any)?.value;
       const placeId = (data.fields.placeId as any)?.value;
 
-      if (!placeId) {
-        return reply.status(400).send({ message: 'placeId é obrigatório' });
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!placeId || !uuidRegex.test(placeId)) {
+        return reply.status(400).send({ message: 'placeId inválido (deve ser um UUID válido)' });
       }
 
       const result = await mediaService.uploadPhoto({

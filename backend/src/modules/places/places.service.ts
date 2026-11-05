@@ -267,6 +267,7 @@ export class PlacesService {
 
     const whereClause = Prisma.sql`WHERE ${Prisma.join(whereConditions, ' AND ')}`;
 
+    const safetyLimit = requiredCriteria.length > 0 ? 200 : Math.min(limit + offset, 200);
     const rawPlaces = await prisma.$queryRaw<any[]>(Prisma.sql`
       SELECT 
         p.*,
@@ -278,6 +279,7 @@ export class PlacesService {
         p.overall_score DESC,
         p.total_reviews DESC,
         distance_meters ASC
+      LIMIT ${safetyLimit}
     `);
 
     // Filter by requiredCriteria (average score >= 4.0 for specified criteria)

@@ -1,9 +1,11 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { reportsService } from './reports.service.js';
+import { prisma } from '../../core/database/prisma.js';
+import { ForbiddenError } from '../../core/errors/app-error.js';
 import { z } from 'zod';
 
 const createReportSchema = z.object({
-  targetType: z.enum(['REVIEW', 'MESSAGE', 'USER', 'EVENT', 'MEDIA']),
+  targetType: z.enum(['REVIEW', 'MESSAGE', 'USER', 'EVENT', 'MEDIA', 'FORUM_TOPIC', 'FORUM_COMMENT']),
   targetId: z.string().uuid(),
   reason: z.enum(['INACCURATE_DATA', 'INAPPROPRIATE_MEDIA', 'HARASSMENT', 'SPAM', 'OTHER']),
   details: z.string().max(1000).optional(),
@@ -15,6 +17,20 @@ const resolveReportSchema = z.object({
 });
 
 export async function reportsRoutes(app: FastifyInstance) {
+  const requireModerator = async (request: FastifyRequest) => {
+    let role = request.user.role;
+    if (!role) {
+      const user = await prisma.user.findUnique({
+        where: { id: request.user.id },
+        select: { role: true },
+      });
+      role = user?.role || 'USER';
+    }
+    if (role !== 'MODERATOR' && role !== 'ADMIN') {
+      throw new ForbiddenError('Acesso restrito: apenas moderadores e administradores têm permissão para acessar a fila de moderação');
+    }
+  };
+
   // File a report (FR-023, FR-024)
   app.post(
     '/reports',
@@ -23,7 +39,7 @@ export async function reportsRoutes(app: FastifyInstance) {
       const body = createReportSchema.parse(request.body);
       const result = await reportsService.createReport({
         reporterId: request.user.id,
-        targetType: body.targetType,
+        targetType: body.targetType as any,
         targetId: body.targetId,
         reason: body.reason,
         details: body.details,
@@ -32,10 +48,10 @@ export async function reportsRoutes(app: FastifyInstance) {
     }
   );
 
-  // Moderation queue: list reports
+  // Moderation queue: list reports (MODERATOR/ADMIN only)
   app.get(
     '/reports',
-    { preHandler: [app.authenticate] },
+    { preHandler: [app.authenticate, requireModerator] },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { status, limit = 20, offset = 0 } = request.query as any;
       const result = await reportsService.listReports({
@@ -47,10 +63,10 @@ export async function reportsRoutes(app: FastifyInstance) {
     }
   );
 
-  // Moderation action
+  // Moderation action (MODERATOR/ADMIN only)
   app.patch(
     '/reports/:id',
-    { preHandler: [app.authenticate] },
+    { preHandler: [app.authenticate, requireModerator] },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const body = resolveReportSchema.parse(request.body);

@@ -34,6 +34,7 @@ describe('Content Reports & Automatic Quarantine Integration (US5)', () => {
         password_hash: passwordHash,
         name: 'Reporter 1',
         handle: `rep1_${Date.now()}`,
+        role: 'MODERATOR',
       },
     });
 
@@ -81,9 +82,9 @@ describe('Content Reports & Automatic Quarantine Integration (US5)', () => {
     });
     reviewId = review.id;
 
-    reporterToken1 = app.jwt.sign({ id: user1.id, email: user1.email });
-    reporterToken2 = app.jwt.sign({ id: user2.id, email: user2.email });
-    reporterToken3 = app.jwt.sign({ id: user3.id, email: user3.email });
+    reporterToken1 = app.jwt.sign({ id: user1.id, email: user1.email, role: user1.role });
+    reporterToken2 = app.jwt.sign({ id: user2.id, email: user2.email, role: user2.role });
+    reporterToken3 = app.jwt.sign({ id: user3.id, email: user3.email, role: user3.role });
   });
 
   afterAll(async () => {

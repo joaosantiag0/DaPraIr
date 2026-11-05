@@ -252,7 +252,7 @@ class _ProfilePrivacySettingsScreenState extends State<ProfilePrivacySettingsScr
                         padding: const EdgeInsets.only(bottom: 16.0),
                         child: Card(
                           elevation: 0.5,
-                          color: AppColors.primaryContainer.withOpacity(0.3),
+                          color: AppColors.primaryContainer.withValues(alpha: 0.3),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                             side: const BorderSide(color: AppColors.primaryBlue, width: 1.2),

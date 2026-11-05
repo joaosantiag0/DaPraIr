@@ -6,6 +6,7 @@ import '../map_search/map_search_screen.dart';
 import '../events/events_list_screen.dart';
 import '../social/social_connections_screen.dart';
 import '../profile/profile_privacy_settings_screen.dart';
+import '../forum/forum_home_view.dart';
 import '../auth/login_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
@@ -44,6 +45,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             onNavigateToLogin: _onNavigateToLogin,
           ),
           const EventsListScreen(),
+          ForumHomeView(
+            isAuthenticated: isAuthenticated,
+            onNavigateToLogin: _onNavigateToLogin,
+          ),
           SocialConnectionsScreen(
             isAuthenticated: isAuthenticated,
             onNavigateToLogin: _onNavigateToLogin,
@@ -87,6 +92,12 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                   selectedIcon: Icon(Icons.event),
                   label: 'Eventos',
                   tooltip: 'Descobrir encontros inclusivos',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.forum_outlined),
+                  selectedIcon: Icon(Icons.forum),
+                  label: 'Fórum',
+                  tooltip: 'Espaço de debate e fórum de tópicos',
                 ),
                 NavigationDestination(
                   icon: Icon(Icons.people_outline),

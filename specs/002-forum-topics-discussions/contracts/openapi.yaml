@@ -1,0 +1,674 @@
+openapi: 3.1.0
+info:
+  title: DáPraIr? Fórum & Debates API
+  version: 1.0.0
+  description: >
+    API REST para o Espaço de Debate e Fórum de Tópicos Categorizados do DáPraIr?.
+    Suporta categorias temáticas, controle de visibilidade em 3 níveis (PUBLIC, COMMUNITY, AUTHOR),
+    subthreads aninhadas até 3 níveis de profundidade, curtidas (upvotes), moderação comunitária
+    e exclusão segura em conformidade com a LGPD e WCAG 2.1 AA.
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Servidor de Desenvolvimento Local
+
+security:
+  - bearerAuth: []
+
+paths:
+  # ---------------------------------------------------------------------------
+  # CATEGORIAS DO FÓRUM
+  # ---------------------------------------------------------------------------
+  /forum/categories:
+    get:
+      summary: Listar categorias temáticas ativas
+      tags: [Forum Categories]
+      security: []
+      description: Retorna o catálogo de categorias disponíveis para navegação e criação de tópicos.
+      responses:
+        '200':
+          description: Lista de categorias retornada com sucesso
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ForumCategory'
+
+    post:
+      summary: Criar nova categoria temática
+      tags: [Forum Categories]
+      description: Restrito a administradores. Cria uma nova categoria curada.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, slug, description, icon_name]
+              properties:
+                name:
+                  type: string
+                  example: Mobilidade Urbana
+                slug:
+                  type: string
+                  example: mobilidade-urbana
+                description:
+                  type: string
+                  example: Debates sobre calçadas, transporte público e acessibilidade viária.
+                icon_name:
+                  type: string
+                  example: directions_bus
+                display_order:
+                  type: integer
+                  default: 0
+      responses:
+        '201':
+          description: Categoria criada com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForumCategory'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /forum/categories/{id}:
+    patch:
+      summary: Atualizar categoria temática
+      tags: [Forum Categories]
+      description: Restrito a administradores. Atualiza dados ou status de uma categoria.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                icon_name:
+                  type: string
+                display_order:
+                  type: integer
+                is_active:
+                  type: boolean
+      responses:
+        '200':
+          description: Categoria atualizada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForumCategory'
+
+  # ---------------------------------------------------------------------------
+  # TÓPICOS DO FÓRUM
+  # ---------------------------------------------------------------------------
+  /forum/topics:
+    get:
+      summary: Listar tópicos com filtros e visibilidade contextual
+      tags: [Forum Topics]
+      security: []
+      description: >
+        Retorna tópicos aplicando filtros de categoria, ordenação e regras de visibilidade.
+        Para visitantes anônimos, apenas tópicos 'PUBLIC' são retornados.
+      parameters:
+        - name: category_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum: [recent, likes, comments, mine]
+            default: recent
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Lista paginada de tópicos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTopics'
+
+    post:
+      summary: Criar novo tópico de discussão
+      tags: [Forum Topics]
+      description: Usuário autenticado cria um tópico informando categoria, título, conteúdo e visibilidade.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [category_id, title, content, visibility]
+              properties:
+                category_id:
+                  type: string
+                  format: uuid
+                title:
+                  type: string
+                  minLength: 5
+                  maxLength: 200
+                  example: Dificuldades de acesso no metrô central
+                content:
+                  type: string
+                  minLength: 10
+                  example: Gostaria de debater sobre o elevador desativado na estação central...
+                visibility:
+                  type: string
+                  enum: [PUBLIC, COMMUNITY, AUTHOR]
+                  default: PUBLIC
+      responses:
+        '201':
+          description: Tópico criado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForumTopic'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /forum/topics/{id}:
+    get:
+      summary: Obter detalhes de um tópico
+      tags: [Forum Topics]
+      security: []
+      description: Retorna os detalhes do tópico se o usuário possuir permissão segundo a visibilidade.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Tópico encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForumTopic'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      summary: Editar tópico existente
+      tags: [Forum Topics]
+      description: Permite ao autor editar título e conteúdo. Sinaliza is_edited.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  minLength: 5
+                  maxLength: 200
+                content:
+                  type: string
+                  minLength: 10
+      responses:
+        '200':
+          description: Tópico atualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForumTopic'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    delete:
+      summary: Excluir tópico
+      tags: [Forum Topics]
+      description: >
+        Remove o tópico. Se possuir comentários comunitários, o conteúdo é redigido
+        e o autor desvinculado conforme LGPD.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Tópico excluído ou redigido com sucesso
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /forum/topics/{id}/like:
+    post:
+      summary: Alternar curtida (upvote) no tópico
+      tags: [Forum Topics]
+      description: Adiciona ou remove a curtida do usuário autenticado no tópico especificado.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Estado do like atualizado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  liked:
+                    type: boolean
+                  likes_count:
+                    type: integer
+
+  # ---------------------------------------------------------------------------
+  # COMENTÁRIOS E SUBTHREADS
+  # ---------------------------------------------------------------------------
+  /forum/topics/{id}/comments:
+    get:
+      summary: Listar comentários e subthreads de um tópico
+      tags: [Forum Comments]
+      security: []
+      description: Retorna a árvore hierárquica de comentários respeitando regras de visibilidade.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Árvore hierárquica de comentários
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ForumComment'
+
+    post:
+      summary: Criar comentário ou resposta em subthread
+      tags: [Forum Comments]
+      description: >
+        Adiciona comentário na base do tópico ou responde a um comentário existente (subthread).
+        A profundidade máxima direta é 3. A visibilidade não pode exceder o teto do tópico.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content, visibility]
+              properties:
+                parent_id:
+                  type: string
+                  format: uuid
+                  nullable: true
+                  description: ID do comentário pai (nulo se comentário de 1º nível)
+                content:
+                  type: string
+                  minLength: 1
+                  maxLength: 5000
+                visibility:
+                  type: string
+                  enum: [PUBLIC, COMMUNITY, AUTHOR]
+                  default: PUBLIC
+      responses:
+        '201':
+          description: Comentário criado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForumComment'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /forum/comments/{id}:
+    patch:
+      summary: Editar comentário existente
+      tags: [Forum Comments]
+      description: Permite ao autor do comentário editar o texto.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content:
+                  type: string
+                  minLength: 1
+                  maxLength: 5000
+      responses:
+        '200':
+          description: Comentário atualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForumComment'
+
+    delete:
+      summary: Excluir comentário
+      tags: [Forum Comments]
+      description: >
+        Remove o comentário. Se possuir respostas filhas, o texto é substituído por
+        '[Comentário removido pelo autor]' preservando os nós filhos.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Comentário removido ou redigido
+
+  /forum/comments/{id}/like:
+    post:
+      summary: Alternar curtida (upvote) no comentário
+      tags: [Forum Comments]
+      description: Adiciona ou remove a curtida do usuário autenticado no comentário especificado.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Estado do like atualizado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  liked:
+                    type: boolean
+                  likes_count:
+                    type: integer
+
+# ---------------------------------------------------------------------------
+# COMPONENTES E SCHEMAS
+# ---------------------------------------------------------------------------
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    ForumCategory:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+        icon_name:
+          type: string
+        display_order:
+          type: integer
+        is_active:
+          type: boolean
+        topics_count:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+
+    ForumTopic:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        category_id:
+          type: string
+          format: uuid
+        category:
+          $ref: '#/components/schemas/ForumCategory'
+        author_id:
+          type: string
+          format: uuid
+        author:
+          $ref: '#/components/schemas/AuthorSummary'
+        title:
+          type: string
+        content:
+          type: string
+        visibility:
+          type: string
+          enum: [PUBLIC, COMMUNITY, AUTHOR]
+        status:
+          type: string
+          enum: [ACTIVE, LOCKED, REMOVED_BY_AUTHOR, REMOVED_BY_ADMIN]
+        is_edited:
+          type: boolean
+        edited_at:
+          type: string
+          format: date-time
+          nullable: true
+        likes_count:
+          type: integer
+        comments_count:
+          type: integer
+        user_has_liked:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ForumComment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        topic_id:
+          type: string
+          format: uuid
+        parent_id:
+          type: string
+          format: uuid
+          nullable: true
+        author_id:
+          type: string
+          format: uuid
+          nullable: true
+        author:
+          $ref: '#/components/schemas/AuthorSummary'
+          nullable: true
+        reply_to_user_id:
+          type: string
+          format: uuid
+          nullable: true
+        reply_to_user:
+          $ref: '#/components/schemas/AuthorSummary'
+          nullable: true
+        content:
+          type: string
+        depth:
+          type: integer
+          minimum: 1
+          maximum: 3
+        visibility:
+          type: string
+          enum: [PUBLIC, COMMUNITY, AUTHOR]
+        status:
+          type: string
+          enum: [ACTIVE, REMOVED_BY_AUTHOR, REMOVED_BY_ADMIN]
+        is_edited:
+          type: boolean
+        edited_at:
+          type: string
+          format: date-time
+          nullable: true
+        likes_count:
+          type: integer
+        user_has_liked:
+          type: boolean
+        replies:
+          type: array
+          items:
+            $ref: '#/components/schemas/ForumComment'
+        created_at:
+          type: string
+          format: date-time
+
+    AuthorSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        handle:
+          type: string
+        avatar_url:
+          type: string
+          nullable: true
+        badges:
+          type: array
+          items:
+            type: string
+
+    PaginatedTopics:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ForumTopic'
+        meta:
+          type: object
+          properties:
+            page:
+              type: integer
+            limit:
+              type: integer
+            total:
+              type: integer
+            pages:
+              type: integer
+
+  responses:
+    BadRequest:
+      description: Requisição inválida ou parâmetros ausentes
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              statusCode:
+                type: integer
+                example: 400
+              error:
+                type: string
+                example: Bad Request
+              message:
+                type: string
+
+    Unauthorized:
+      description: Não autenticado ou token inválido
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              statusCode:
+                type: integer
+                example: 401
+              error:
+                type: string
+                example: Unauthorized
+
+    Forbidden:
+      description: Acesso negado pela política de visibilidade ou permissões
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              statusCode:
+                type: integer
+                example: 403
+              error:
+                type: string
+                example: Forbidden
+
+    NotFound:
+      description: Recurso não encontrado
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              statusCode:
+                type: integer
+                example: 404
+              error:
+                type: string
+                example: Not Found

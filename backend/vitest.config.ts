@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
@@ -5,6 +6,10 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     fileParallelism: false,
+    env: {
+      DATABASE_URL: 'postgresql://daprair:daprair_password@localhost:5433/daprair_db?schema=public',
+      NODE_ENV: 'test',
+    },
     include: ['tests/**/*.test.ts'],
     coverage: {
       provider: 'v8',

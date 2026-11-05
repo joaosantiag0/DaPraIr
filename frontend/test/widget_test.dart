@@ -9,6 +9,9 @@ import 'package:frontend/presentation/bloc/places/places_bloc.dart';
 import 'package:frontend/presentation/bloc/events/events_bloc.dart';
 import 'package:frontend/presentation/bloc/social/social_bloc.dart';
 import 'package:frontend/presentation/bloc/profile/profile_bloc.dart';
+import 'package:frontend/presentation/bloc/forum/forum_bloc.dart';
+import 'package:frontend/presentation/bloc/forum/forum_event.dart';
+import 'package:frontend/presentation/bloc/forum/forum_state.dart';
 import 'package:frontend/presentation/views/home/main_navigation_screen.dart';
 
 class MockAuthBloc extends MockBloc<AuthEvent, AuthState> implements AuthBloc {}
@@ -17,6 +20,7 @@ class MockPlacesBloc extends MockBloc<PlacesEvent, PlacesState> implements Place
 class MockEventsBloc extends MockBloc<EventsEvent, EventsState> implements EventsBloc {}
 class MockSocialBloc extends MockBloc<SocialEvent, SocialState> implements SocialBloc {}
 class MockProfileBloc extends MockBloc<ProfileEvent, ProfileState> implements ProfileBloc {}
+class MockForumBloc extends MockBloc<ForumEvent, ForumState> implements ForumBloc {}
 
 void main() {
   late MockAuthBloc mockAuthBloc;
@@ -25,6 +29,7 @@ void main() {
   late MockEventsBloc mockEventsBloc;
   late MockSocialBloc mockSocialBloc;
   late MockProfileBloc mockProfileBloc;
+  late MockForumBloc mockForumBloc;
 
   setUp(() {
     mockAuthBloc = MockAuthBloc();
@@ -33,6 +38,7 @@ void main() {
     mockEventsBloc = MockEventsBloc();
     mockSocialBloc = MockSocialBloc();
     mockProfileBloc = MockProfileBloc();
+    mockForumBloc = MockForumBloc();
 
     when(() => mockAuthBloc.state).thenReturn(Unauthenticated());
     when(() => mockFeedBloc.state).thenReturn(const FeedState());
@@ -40,6 +46,7 @@ void main() {
     when(() => mockEventsBloc.state).thenReturn(const EventsState());
     when(() => mockSocialBloc.state).thenReturn(SocialInitial());
     when(() => mockProfileBloc.state).thenReturn(ProfileInitial());
+    when(() => mockForumBloc.state).thenReturn(const ForumHomeLoaded(categories: [], highlightedTopics: []));
   });
 
   testWidgets('MainNavigationScreen smoke test and navigation rendering', (WidgetTester tester) async {
@@ -52,6 +59,7 @@ void main() {
           BlocProvider<EventsBloc>.value(value: mockEventsBloc),
           BlocProvider<SocialBloc>.value(value: mockSocialBloc),
           BlocProvider<ProfileBloc>.value(value: mockProfileBloc),
+          BlocProvider<ForumBloc>.value(value: mockForumBloc),
         ],
         child: const MaterialApp(
           home: MainNavigationScreen(),
@@ -65,6 +73,7 @@ void main() {
     expect(find.text('Início'), findsOneWidget);
     expect(find.text('Locais'), findsOneWidget);
     expect(find.text('Eventos'), findsOneWidget);
+    expect(find.text('Fórum'), findsOneWidget);
     expect(find.text('Social'), findsOneWidget);
     expect(find.text('Perfil'), findsOneWidget);
   });

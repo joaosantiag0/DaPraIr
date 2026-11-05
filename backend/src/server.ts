@@ -17,6 +17,7 @@ import { chatRoutes } from './modules/chat/chat.routes.js';
 import { eventsRoutes } from './modules/events/events.routes.js';
 import { reportsRoutes } from './modules/reports/reports.routes.js';
 import { feedRoutes } from './modules/feed/feed.routes.js';
+import { forumRoutes } from './modules/forum/forum.routes.js';
 
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
@@ -100,6 +101,7 @@ export async function buildApp(): Promise<FastifyInstance> {
       await api.register(placesRoutes);
       await api.register(reviewsRoutes);
       await api.register(mediaRoutes);
+      await api.register(forumRoutes);
     },
     { prefix: '/api/v1' }
   );

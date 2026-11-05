@@ -12,6 +12,7 @@ import 'data/repositories/chat_repository_impl.dart';
 import 'data/repositories/events_repository_impl.dart';
 import 'data/repositories/feed_repository_impl.dart';
 import 'data/repositories/reports_repository_impl.dart';
+import 'data/repositories/forum_repository_impl.dart';
 import 'domain/repositories/auth_repository.dart';
 import 'domain/repositories/places_repository.dart';
 import 'domain/repositories/user_repository.dart';
@@ -20,6 +21,7 @@ import 'domain/repositories/chat_repository.dart';
 import 'domain/repositories/events_repository.dart';
 import 'domain/repositories/feed_repository.dart';
 import 'domain/repositories/reports_repository.dart';
+import 'domain/repositories/forum_repository.dart';
 import 'presentation/bloc/auth/auth_bloc.dart';
 import 'presentation/bloc/places/places_bloc.dart';
 import 'presentation/bloc/reviews/reviews_bloc.dart';
@@ -28,6 +30,7 @@ import 'presentation/bloc/chat/chat_bloc.dart';
 import 'presentation/bloc/events/events_bloc.dart';
 import 'presentation/bloc/feed/feed_bloc.dart';
 import 'presentation/bloc/profile/profile_bloc.dart';
+import 'presentation/bloc/forum/forum_bloc.dart';
 import 'presentation/views/home/main_navigation_screen.dart';
 
 void main() {
@@ -45,6 +48,7 @@ void main() {
   final eventsRepo = EventsRepositoryImpl(dioClient.dio);
   final feedRepo = FeedRepositoryImpl(dioClient.dio);
   final reportsRepo = ReportsRepositoryImpl(dioClient.dio);
+  final forumRepo = ForumRepositoryImpl(dio: dioClient.dio);
 
   runApp(
     DaPraIrApp(
@@ -56,6 +60,7 @@ void main() {
       eventsRepository: eventsRepo,
       feedRepository: feedRepo,
       reportsRepository: reportsRepo,
+      forumRepository: forumRepo,
     ),
   );
 }
@@ -69,6 +74,7 @@ class DaPraIrApp extends StatefulWidget {
   final EventsRepository? eventsRepository;
   final FeedRepository? feedRepository;
   final ReportsRepository? reportsRepository;
+  final ForumRepository? forumRepository;
 
   const DaPraIrApp({
     super.key,
@@ -80,6 +86,7 @@ class DaPraIrApp extends StatefulWidget {
     this.eventsRepository,
     this.feedRepository,
     this.reportsRepository,
+    this.forumRepository,
   });
 
   @override
@@ -109,6 +116,7 @@ class _DaPraIrAppState extends State<DaPraIrApp> {
     final eventsRepo = widget.eventsRepository ?? EventsRepositoryImpl(dioClient.dio);
     final feedRepo = widget.feedRepository ?? FeedRepositoryImpl(dioClient.dio);
     final reportsRepo = widget.reportsRepository ?? ReportsRepositoryImpl(dioClient.dio);
+    final forumRepo = widget.forumRepository ?? ForumRepositoryImpl(dio: dioClient.dio);
 
     return MultiBlocProvider(
       providers: [
@@ -138,6 +146,9 @@ class _DaPraIrAppState extends State<DaPraIrApp> {
         ),
         BlocProvider<ProfileBloc>(
           create: (_) => ProfileBloc(repository: userRepo),
+        ),
+        BlocProvider<ForumBloc>(
+          create: (_) => ForumBloc(forumRepository: forumRepo),
         ),
       ],
       child: MaterialApp(

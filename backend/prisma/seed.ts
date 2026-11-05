@@ -298,7 +298,130 @@ async function main() {
     }
   }
 
-  console.log('✅ Accessibility criteria, places, reviews and events seeded successfully!');
+  console.log('🌱 Seeding forum categories and sample public discussions...');
+  const forumCategoriesData = [
+    {
+      name: 'Mobilidade Urbana',
+      slug: 'mobilidade-urbana',
+      description: 'Debates sobre calçadas, transporte público, ônibus, metrô e rotas acessíveis nas cidades.',
+      icon_name: 'directions_bus',
+      display_order: 1,
+      is_active: true,
+    },
+    {
+      name: 'Bares e Restaurantes',
+      slug: 'bares-e-restaurantes',
+      description: 'Dicas, experiências e avaliações sobre gastronomia acessível e banheiros adaptados.',
+      icon_name: 'restaurant',
+      display_order: 2,
+      is_active: true,
+    },
+    {
+      name: 'Cultura e Lazer',
+      slug: 'cultura-e-lazer',
+      description: 'Parques, cinemas, teatros, museus e espaços ao ar livre com rotas inclusivas.',
+      icon_name: 'theater_comedy',
+      display_order: 3,
+      is_active: true,
+    },
+    {
+      name: 'Tecnologia Assistiva',
+      slug: 'tecnologia-assistiva',
+      description: 'Cadeiras motorizadas, adaptações veiculares, rampas portáteis e inovações.',
+      icon_name: 'devices',
+      display_order: 4,
+      is_active: true,
+    },
+    {
+      name: 'Legislação e Direitos PcD',
+      slug: 'legislacao-e-direitos-pcd',
+      description: 'Normas ABNT NBR 9050, Lei Brasileira de Inclusão (LBI) e garantia de direitos.',
+      icon_name: 'gavel',
+      display_order: 5,
+      is_active: true,
+    },
+  ];
+
+  for (const cat of forumCategoriesData) {
+    await prisma.forumCategory.upsert({
+      where: { slug: cat.slug },
+      update: cat,
+      create: cat,
+    });
+  }
+
+  const mobCategory = await prisma.forumCategory.findUnique({
+    where: { slug: 'mobilidade-urbana' },
+  });
+
+  const juUser = createdUsers['ju_mendes'];
+  const marcosUser = createdUsers['marcos_v'];
+
+  if (mobCategory && juUser && marcosUser) {
+    let topic = await prisma.forumTopic.findFirst({
+      where: { title: 'Rampas de acesso em novas linhas de ônibus elétricos' },
+    });
+
+    if (!topic) {
+      topic = await prisma.forumTopic.create({
+        data: {
+          category_id: mobCategory.id,
+          author_id: juUser.id,
+          title: 'Rampas de acesso em novas linhas de ônibus elétricos',
+          content: 'Notaram que a inclinação das rampas nos novos modelos elétricos da zona sul ficou muito melhor? Gostaria de saber as experiências de outros cadeirantes na linha 6000.',
+          visibility: 'PUBLIC',
+          status: 'ACTIVE',
+          likes_count: 2,
+          comments_count: 2,
+        },
+      });
+
+      // Seed likes
+      await prisma.forumTopicLike.createMany({
+        data: [
+          { topic_id: topic.id, user_id: juUser.id },
+          { topic_id: topic.id, user_id: marcosUser.id },
+        ],
+        skipDuplicates: true,
+      });
+
+      // Level 1 Comment
+      const comment1 = await prisma.forumComment.create({
+        data: {
+          topic_id: topic.id,
+          author_id: marcosUser.id,
+          content: 'Testei ontem no ponto da Av. Santo Amaro! O motorista acionou o rebaixamento pneumático com facilidade.',
+          depth: 1,
+          visibility: 'PUBLIC',
+          status: 'ACTIVE',
+          likes_count: 1,
+        },
+      });
+
+      // Level 2 Subthread reply
+      await prisma.forumComment.create({
+        data: {
+          topic_id: topic.id,
+          parent_id: comment1.id,
+          author_id: juUser.id,
+          reply_to_user_id: marcosUser.id,
+          content: 'Que alívio ouvir isso! O rebaixamento faz toda a diferença para cadeiras manuais.',
+          depth: 2,
+          visibility: 'PUBLIC',
+          status: 'ACTIVE',
+          likes_count: 0,
+        },
+      });
+
+      // Update topic count in category
+      await prisma.forumCategory.update({
+        where: { id: mobCategory.id },
+        data: { topics_count: 1 },
+      });
+    }
+  }
+
+  console.log('✅ Accessibility criteria, places, reviews, events and forum seeded successfully!');
 }
 
 main()

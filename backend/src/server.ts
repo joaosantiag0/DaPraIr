@@ -46,6 +46,24 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(sensiblePlugin);
   await app.register(jwtPlugin);
 
+  // Support empty JSON bodies for requests with Content-Type: application/json (e.g. toggle likes)
+  app.addContentTypeParser(
+    'application/json',
+    { parseAs: 'string' },
+    (req, body: string | Buffer, done) => {
+      const raw = typeof body === 'string' ? body : (body ? (body as Buffer).toString('utf-8') : '');
+      if (!raw || raw.trim() === '') {
+        return done(null, {});
+      }
+      try {
+        return done(null, JSON.parse(raw));
+      } catch (err: any) {
+        err.statusCode = 400;
+        return done(err, undefined);
+      }
+    }
+  );
+
   // Swagger Documentation
   await app.register(fastifySwagger, {
     openapi: {

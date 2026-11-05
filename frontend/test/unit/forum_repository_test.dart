@@ -121,7 +121,7 @@ void main() {
     });
 
     test('toggleTopicLike sends POST and returns boolean state', () async {
-      when(() => mockDio.post('/api/v1/forum/topics/top-1/like')).thenAnswer(
+      when(() => mockDio.post('/api/v1/forum/topics/top-1/like', data: any(named: 'data'))).thenAnswer(
         (_) async => Response(
           requestOptions: RequestOptions(path: '/api/v1/forum/topics/top-1/like'),
           statusCode: 200,

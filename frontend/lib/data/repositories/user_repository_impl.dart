@@ -53,7 +53,7 @@ class UserRepositoryImpl implements UserRepository {
 
   @override
   Future<void> anonymizeAccount() async {
-    await dioClient.dio.post('/api/v1/users/me/anonymize');
+    await dioClient.dio.post('/api/v1/users/me/anonymize', data: {});
   }
 
   @override

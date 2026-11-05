@@ -91,7 +91,7 @@ class ForumRepositoryImpl implements ForumRepository {
 
   @override
   Future<bool> toggleTopicLike(String topicId) async {
-    final response = await dio.post('$_base/topics/$topicId/like');
+    final response = await dio.post('$_base/topics/$topicId/like', data: {});
     final data = response.data as Map<String, dynamic>;
     return data['liked'] as bool? ?? false;
   }
@@ -150,7 +150,7 @@ class ForumRepositoryImpl implements ForumRepository {
 
   @override
   Future<bool> toggleCommentLike(String commentId) async {
-    final response = await dio.post('$_base/comments/$commentId/like');
+    final response = await dio.post('$_base/comments/$commentId/like', data: {});
     final data = response.data as Map<String, dynamic>;
     return data['liked'] as bool? ?? false;
   }

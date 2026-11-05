@@ -139,12 +139,13 @@ describe('Forum Routes Integration Tests (US1 - Categories, Topics & Likes)', ()
     });
     const topicId = JSON.parse(topicsRes.body)[0].id;
 
-    // Like
+    // Like (with Content-Type: application/json header and empty body as Flutter Dio sends)
     const likeRes = await app.inject({
       method: 'POST',
       url: `/api/v1/forum/topics/${topicId}/like`,
       headers: {
         Authorization: `Bearer ${testUserToken}`,
+        'Content-Type': 'application/json',
       },
     });
 
@@ -153,12 +154,13 @@ describe('Forum Routes Integration Tests (US1 - Categories, Topics & Likes)', ()
     expect(likeData.liked).toBe(true);
     expect(likeData.likes_count).toBe(1);
 
-    // Unlike
+    // Unlike (with Content-Type: application/json)
     const unlikeRes = await app.inject({
       method: 'POST',
       url: `/api/v1/forum/topics/${topicId}/like`,
       headers: {
         Authorization: `Bearer ${testUserToken}`,
+        'Content-Type': 'application/json',
       },
     });
 

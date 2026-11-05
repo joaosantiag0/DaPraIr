@@ -25,15 +25,7 @@ class _SubmitReviewScreenState extends State<SubmitReviewScreen> {
   final TextEditingController _commentController = TextEditingController();
   final TextEditingController _altTextController = TextEditingController();
 
-  final Map<String, int> _ratings = {
-    'ENTRANCE_RAMP_LEVEL': 5,
-    'ELEVATOR_LIFT': 5,
-    'ADAPTED_BATHROOM': 5,
-    'MANEUVERING_SPACE': 4,
-    'ADAPTED_SEATING': 4,
-    'ACCESSIBLE_PARKING': 5,
-    'INCLUSIVE_SERVICE': 5,
-  };
+  final Map<String, int> _ratings = {};
 
   final List<Map<String, dynamic>> _criteriaList = [
     {'code': 'ENTRANCE_RAMP_LEVEL', 'title': 'Entrada com Rampa ou Nivelada', 'icon': Icons.accessible_forward},
@@ -63,7 +55,10 @@ class _SubmitReviewScreenState extends State<SubmitReviewScreen> {
     super.dispose();
   }
 
-  String _getRatingFeedback(int score) {
+  String _getRatingFeedback(int? score) {
+    if (score == null) {
+      return 'Toque nas estrelas para avaliar';
+    }
     switch (score) {
       case 1:
         return '1 - Inacessível';
@@ -207,6 +202,28 @@ class _SubmitReviewScreenState extends State<SubmitReviewScreen> {
       // AuthBloc not provided in context (e.g. isolated test)
     }
 
+    if (_ratings.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: AppColors.warningOrange,
+          content: const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.white, size: 20),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Avalie pelo menos 1 critério de acessibilidade antes de publicar.',
+                ),
+              ),
+            ],
+          ),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
+      return;
+    }
+
     if (_hasPhotoAttached && _altTextController.text.trim().length < 5) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -311,7 +328,7 @@ class _SubmitReviewScreenState extends State<SubmitReviewScreen> {
               final draftRatings = draft['ratings'] as Map<String, dynamic>;
               setState(() {
                 draftRatings.forEach((k, v) {
-                  if (_ratings.containsKey(k)) {
+                  if (_criteriaList.any((c) => c['code'] == k)) {
                     _ratings[k] = (v as num).toInt();
                   }
                 });
@@ -400,14 +417,17 @@ class _SubmitReviewScreenState extends State<SubmitReviewScreen> {
                 final code = crit['code'] as String;
                 final title = crit['title'] as String;
                 final icon = crit['icon'] as IconData;
-                final currentScore = _ratings[code] ?? 5;
+                final currentScore = _ratings[code];
 
                 return Card(
                   margin: const EdgeInsets.only(bottom: 14),
                   elevation: 0.8,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
-                    side: const BorderSide(color: AppColors.borderLight, width: 1.2),
+                    side: BorderSide(
+                      color: currentScore != null ? AppColors.primaryBlue.withOpacity(0.35) : AppColors.borderLight,
+                      width: 1.2,
+                    ),
                   ),
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
@@ -419,10 +439,14 @@ class _SubmitReviewScreenState extends State<SubmitReviewScreen> {
                             Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: AppColors.primaryContainer,
+                                color: currentScore != null ? AppColors.primaryContainer : AppColors.surfaceMuted,
                                 borderRadius: BorderRadius.circular(10),
                               ),
-                              child: Icon(icon, color: AppColors.primaryBlue, size: 20),
+                              child: Icon(
+                                icon,
+                                color: currentScore != null ? AppColors.primaryBlue : AppColors.textSecondary,
+                                size: 20,
+                              ),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
@@ -431,6 +455,25 @@ class _SubmitReviewScreenState extends State<SubmitReviewScreen> {
                                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                               ),
                             ),
+                            if (currentScore != null)
+                              Semantics(
+                                button: true,
+                                label: 'Limpar nota de $title',
+                                child: TextButton(
+                                  onPressed: () {
+                                    setState(() => _ratings.remove(code));
+                                    SemanticsHelper.announce('Nota de $title removida');
+                                  },
+                                  style: TextButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    minimumSize: const Size(48, 48),
+                                  ),
+                                  child: const Text(
+                                    'Limpar',
+                                    style: TextStyle(fontSize: 12, color: AppColors.textHint),
+                                  ),
+                                ),
+                              ),
                           ],
                         ),
                         const SizedBox(height: 12),
@@ -440,15 +483,25 @@ class _SubmitReviewScreenState extends State<SubmitReviewScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: List.generate(5, (index) {
                             final score = index + 1;
-                            final isSelected = score <= currentScore;
+                            final isSelected = currentScore != null && score <= currentScore;
                             return Semantics(
                               button: true,
                               label: 'Nota $score de 5 para $title',
-                              selected: score == currentScore,
+                              selected: currentScore == score,
                               child: InkWell(
                                 onTap: () {
-                                  setState(() => _ratings[code] = score);
-                                  SemanticsHelper.announce('$title avaliado com $score estrelas');
+                                  setState(() {
+                                    if (_ratings[code] == score) {
+                                      _ratings.remove(code);
+                                    } else {
+                                      _ratings[code] = score;
+                                    }
+                                  });
+                                  SemanticsHelper.announce(
+                                    _ratings.containsKey(code)
+                                        ? '$title avaliado com $score estrelas'
+                                        : 'Nota de $title removida',
+                                  );
                                 },
                                 borderRadius: BorderRadius.circular(24),
                                 child: Container(
@@ -469,15 +522,16 @@ class _SubmitReviewScreenState extends State<SubmitReviewScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
-                            color: AppColors.surfaceMuted,
+                            color: currentScore != null ? AppColors.surfaceMuted : Colors.transparent,
+                            border: currentScore != null ? null : Border.all(color: AppColors.borderLight),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
                             _getRatingFeedback(currentScore),
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.textSecondary,
+                              fontWeight: currentScore != null ? FontWeight.bold : FontWeight.normal,
+                              color: currentScore != null ? AppColors.textSecondary : AppColors.textHint,
                             ),
                           ),
                         ),

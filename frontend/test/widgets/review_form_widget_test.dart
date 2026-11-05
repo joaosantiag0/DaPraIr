@@ -45,5 +45,39 @@ void main() {
     expect(find.text('Vagas Reservadas'), findsOneWidget);
     expect(find.text('Atendimento Inclusivo'), findsOneWidget);
     expect(find.text('Publicar Avaliação'), findsOneWidget);
+
+    // Initial state: criteria start unrated with "Toque nas estrelas para avaliar"
+    expect(find.text('Toque nas estrelas para avaliar'), findsWidgets);
+    expect(find.text('Limpar'), findsNothing);
+  });
+
+  testWidgets('SubmitReviewScreen allows rating criteria and clearing with Limpar button', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: BlocProvider.value(
+          value: reviewsBloc,
+          child: const SubmitReviewScreen(placeId: 'place-123'),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    // Tap on a star for the first criterion (Entrada com Rampa)
+    final starToTap = find.bySemanticsLabel(RegExp(r'Nota 5 de 5 para Entrada')).first;
+    await tester.tap(starToTap);
+    await tester.pumpAndSettle();
+
+    // Now it should show "5 - Totalmente acessível" and the "Limpar" button
+    expect(find.text('5 - Totalmente acessível'), findsOneWidget);
+    expect(find.text('Limpar'), findsOneWidget);
+
+    // Tap "Limpar" to reset
+    await tester.tap(find.text('Limpar'));
+    await tester.pumpAndSettle();
+
+    // Should return to unrated state
+    expect(find.text('5 - Totalmente acessível'), findsNothing);
+    expect(find.text('Limpar'), findsNothing);
   });
 }

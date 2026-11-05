@@ -70,6 +70,8 @@ class UnblockUserEvent extends SocialEvent {
   List<Object?> get props => [connectionId];
 }
 
+class AcceptAllPendingRequestsEvent extends SocialEvent {}
+
 class LoadBlockedUsersEvent extends SocialEvent {}
 
 // States
@@ -141,6 +143,7 @@ class SocialBloc extends Bloc<SocialEvent, SocialState> {
     on<LoadBlockedUsersEvent>(_onLoadBlockedUsers);
     on<SendConnectionRequestEvent>(_onSendRequest);
     on<UpdateConnectionStatusEvent>(_onUpdateStatus);
+    on<AcceptAllPendingRequestsEvent>(_onAcceptAllPending);
     on<BlockUserEvent>(_onBlockUser);
     on<UnblockUserEvent>(_onUnblockUser);
   }
@@ -243,6 +246,45 @@ class SocialBloc extends Bloc<SocialEvent, SocialState> {
         blockedUsers: blocked,
         recommendations: recommendations,
         actionMessage: msg,
+      ));
+    } catch (e) {
+      if (state is SocialLoaded) {
+        final current = state as SocialLoaded;
+        emit(current.copyWith(actionError: cleanSocialErrorMessage(e)));
+      } else {
+        emit(SocialError(cleanSocialErrorMessage(e)));
+      }
+    }
+  }
+
+  Future<void> _onAcceptAllPending(AcceptAllPendingRequestsEvent event, Emitter<SocialState> emit) async {
+    try {
+      if (state is SocialLoaded) {
+        final current = state as SocialLoaded;
+        final pending = current.pendingReceived;
+        if (pending.isNotEmpty) {
+          for (final req in pending) {
+            try {
+              await repository.updateConnectionStatus(req.id, 'ACCEPTED');
+            } catch (_) {}
+          }
+        }
+      }
+      final connections = await repository.getConnections();
+      final recommendations = await repository.getRecommendations();
+      final blocked = await repository.getBlockedUsers();
+
+      final friends = connections.where((c) => c.status == 'ACCEPTED').toList();
+      final pendingReceived = connections.where((c) => c.status == 'PENDING' && !c.isOutgoing).toList();
+      final pendingSent = connections.where((c) => c.status == 'PENDING' && c.isOutgoing).toList();
+
+      emit(SocialLoaded(
+        friends: friends,
+        pendingReceived: pendingReceived,
+        pendingSent: pendingSent,
+        blockedUsers: blocked,
+        recommendations: recommendations,
+        actionMessage: 'Todas as solicitações de amizade foram aceitas!',
       ));
     } catch (e) {
       if (state is SocialLoaded) {

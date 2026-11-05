@@ -385,72 +385,84 @@ class _SocialConnectionsScreenState extends State<SocialConnectionsScreen> with 
                           ),
                         ),
                       )
-                    : ListView.builder(
-                        itemCount: state.pendingReceived.length,
+                    : ListView(
                         padding: const EdgeInsets.all(12),
-                        itemBuilder: (context, i) {
-                          final req = state.pendingReceived[i];
-                          return AccessibleCard(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    CircleAvatar(
-                                      radius: 20,
-                                      backgroundColor: AppColors.secondaryContainer,
-                                      child: Text(
-                                        req.peer.name.isNotEmpty ? req.peer.name[0].toUpperCase() : 'U',
-                                        style: const TextStyle(color: AppColors.accentTeal, fontWeight: FontWeight.bold),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Text(
-                                        '${req.peer.name} (${req.peer.handle}) quer se conectar',
-                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 14),
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: AccessibleButton(
-                                        label: 'Recusar',
-                                        isSecondary: true,
-                                        onPressed: () {
-                                          context.read<SocialBloc>().add(
-                                                UpdateConnectionStatusEvent(
-                                                  connectionId: req.id,
-                                                  status: 'DECLINED',
-                                                ),
-                                              );
-                                        },
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: AccessibleButton(
-                                        label: 'Aceitar',
-                                        onPressed: () {
-                                          context.read<SocialBloc>().add(
-                                                UpdateConnectionStatusEvent(
-                                                  connectionId: req.id,
-                                                  status: 'ACCEPTED',
-                                                ),
-                                              );
-                                          SemanticsHelper.announce('Solicitação de amizade aceita!');
-                                        },
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
+                        children: [
+                          if (state.pendingReceived.length > 1)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: AccessibleButton(
+                                label: 'Aceitar Todas (${state.pendingReceived.length})',
+                                icon: Icons.done_all,
+                                onPressed: () {
+                                  context.read<SocialBloc>().add(AcceptAllPendingRequestsEvent());
+                                  SemanticsHelper.announce('Aceitando todas as solicitações de amizade');
+                                },
+                              ),
                             ),
-                          );
-                        },
+                          ...state.pendingReceived.map(
+                            (req) => AccessibleCard(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      CircleAvatar(
+                                        radius: 20,
+                                        backgroundColor: AppColors.secondaryContainer,
+                                        child: Text(
+                                          req.peer.name.isNotEmpty ? req.peer.name[0].toUpperCase() : 'U',
+                                          style: const TextStyle(color: AppColors.accentTeal, fontWeight: FontWeight.bold),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Text(
+                                          '${req.peer.name} (${req.peer.handle}) quer se conectar',
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 14),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: AccessibleButton(
+                                          label: 'Recusar',
+                                          isSecondary: true,
+                                          onPressed: () {
+                                            context.read<SocialBloc>().add(
+                                                  UpdateConnectionStatusEvent(
+                                                    connectionId: req.id,
+                                                    status: 'DECLINED',
+                                                  ),
+                                                );
+                                          },
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: AccessibleButton(
+                                          label: 'Aceitar',
+                                          onPressed: () {
+                                            context.read<SocialBloc>().add(
+                                                  UpdateConnectionStatusEvent(
+                                                    connectionId: req.id,
+                                                    status: 'ACCEPTED',
+                                                  ),
+                                                );
+                                            SemanticsHelper.announce('Solicitação de amizade aceita!');
+                                          },
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
 
                 // 3. Recommendations Tab

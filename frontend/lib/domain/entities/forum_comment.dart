@@ -1,4 +1,4 @@
-import 'package:equatable/equatable.dart';
+import 'package:frontend/core/base/equatable.dart';
 import 'forum_topic.dart';
 
 class ForumComment extends Equatable {

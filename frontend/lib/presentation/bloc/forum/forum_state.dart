@@ -1,4 +1,4 @@
-import 'package:equatable/equatable.dart';
+import 'package:frontend/core/base/equatable.dart';
 import '../../../domain/entities/forum_category.dart';
 import '../../../domain/entities/forum_topic.dart';
 import '../../../domain/entities/forum_comment.dart';

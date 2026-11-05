@@ -1,4 +1,4 @@
-import 'package:equatable/equatable.dart';
+import 'package:frontend/core/base/equatable.dart';
 
 abstract class ForumEvent extends Equatable {
   const ForumEvent();

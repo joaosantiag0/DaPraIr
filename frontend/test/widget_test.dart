@@ -73,7 +73,7 @@ void main() {
     expect(find.text('Início'), findsOneWidget);
     expect(find.text('Locais'), findsOneWidget);
     expect(find.text('Eventos'), findsOneWidget);
-    expect(find.text('Fórum'), findsOneWidget);
+    expect(find.text('Debates'), findsOneWidget);
     expect(find.text('Social'), findsOneWidget);
     expect(find.text('Perfil'), findsOneWidget);
   });

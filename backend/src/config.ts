@@ -19,6 +19,8 @@ const envSchema = z.object({
   GOOGLE_PLACES_API_KEY: z.string().optional().default(''),
   GOOGLE_PLACES_DAILY_LIMIT: z.coerce.number().default(30),
   ENABLE_AUTO_GOOGLE_PLACES_SYNC: z.coerce.boolean().default(false),
+  ADMIN_EMAILS: z.string().optional().default(''),
+  ADMIN_EMAIL: z.string().optional().default(''),
 });
 
 const _env = envSchema.safeParse(process.env);

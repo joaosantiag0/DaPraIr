@@ -89,4 +89,31 @@ describe('Auth API (US2 - Inclusão e Autenticação)', () => {
 
     expect(response.statusCode).toBe(401);
   });
+
+  it('POST /api/v1/auth/register - should automatically elevate user to ADMIN if email matches ADMIN_EMAILS', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/auth/register',
+      payload: {
+        name: 'Admin Test',
+        email: 'admin@daprair.com',
+        handle: 'admin_daprair_test',
+        password: 'Password123!',
+        acceptTermsVersion: '1.0.0',
+      },
+    });
+
+    expect(response.statusCode).toBe(201);
+    const body = JSON.parse(response.body);
+    expect(body.user.email).toBe('admin@daprair.com');
+    expect(body.user.role).toBe('ADMIN');
+
+    const dbUser = await prisma.user.findUnique({ where: { email: 'admin@daprair.com' } });
+    expect(dbUser?.role).toBe('ADMIN');
+
+    // Clean up
+    await prisma.userConsent.deleteMany({ where: { user_id: dbUser!.id } });
+    await prisma.user.delete({ where: { id: dbUser!.id } });
+  });
 });
+

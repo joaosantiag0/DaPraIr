@@ -42,6 +42,7 @@ services:
       S3_REGION: us-east-1
       S3_FORCE_PATH_STYLE: "true"
       GOOGLE_PLACES_API_KEY: ${GOOGLE_PLACES_API_KEY:-}
+      ADMIN_EMAILS: ${ADMIN_EMAILS:-joao@test.com,admin@daprair.com}
     volumes:
       - uploads_data:/app/uploads
     healthcheck:

@@ -1,6 +1,7 @@
 import { prisma } from '../../core/database/prisma.js';
 import { CryptoService } from '../../core/crypto/encryption.js';
 import { BadRequestError, UnauthorizedError, ConflictError } from '../../core/errors/app-error.js';
+import { config } from '../../config.js';
 
 export interface RegisterDTO {
   name: string;
@@ -18,6 +19,15 @@ export interface LoginDTO {
 }
 
 export class AuthService {
+  private isAdminEmail(email: string): boolean {
+    const rawList = `${config.ADMIN_EMAILS || ''},${config.ADMIN_EMAIL || ''}`;
+    const adminEmails = rawList
+      .split(',')
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean);
+    return adminEmails.includes(email.toLowerCase().trim());
+  }
+
   async register(data: RegisterDTO) {
     const { name, email, handle, password, acceptTermsVersion, clientIp = '127.0.0.1', userAgent } = data;
 
@@ -40,6 +50,7 @@ export class AuthService {
 
     const passwordHash = await CryptoService.hashPassword(password);
     const ipHash = CryptoService.hashPseudonym(clientIp);
+    const initialRole = this.isAdminEmail(normalizedEmail) ? 'ADMIN' : 'USER';
 
     // Create user and initial LGPD consent in transaction
     const user = await prisma.$transaction(async (tx) => {
@@ -49,6 +60,7 @@ export class AuthService {
           email: normalizedEmail,
           handle: normalizedHandle,
           password_hash: passwordHash,
+          role: initialRole,
           status: 'ACTIVE',
         },
       });
@@ -107,6 +119,14 @@ export class AuthService {
 
     if (!user || !user.password_hash || user.status !== 'ACTIVE' || !isMatch) {
       throw new UnauthorizedError('Credenciais inválidas');
+    }
+
+    if (this.isAdminEmail(normalizedEmail) && user.role !== 'ADMIN') {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { role: 'ADMIN' },
+      });
+      user.role = 'ADMIN';
     }
 
     return {

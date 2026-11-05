@@ -44,6 +44,16 @@ Inspirado nas diretrizes da norma técnica brasileira **ABNT NBR 9050** e nos pr
 - **Quarentena automática**: conteúdos com 3 ou mais denúncias distintas saem imediatamente do ar até decisão da moderação.
 - Alerta explícito de regras na primeira publicação do usuário: incentivo à denúncia cidadã e aviso de que conteúdos contendo extremismo político e religioso devem ser evitados e poderão ser removidos.
 
+### 🛠️ Painel Administrativo e Governança de Moderação
+- Fila de moderação com ações de resolução (aprovação, advertência, suspensão, banimento e invalidação imediata de sessão).
+- Gestão de penalidades ativas, moderação de conteúdo unificado e trilha completa de auditoria.
+- Elevação automática de administradores via variável de ambiente `ADMIN_EMAILS`.
+
+### 🏆 Gamificação e Ranking Comunitário
+- Sistema de pontuação por avaliações, fotos inclusivas e interações na comunidade.
+- Ranking com visualizações mensal, geral e por amigos, acessível diretamente na página de perfil.
+- Controle de privacidade para participação pública ou anônima no placar de líderes.
+
 ### 🔒 Privacidade e Conformidade LGPD
 - Localização exata e dados sensíveis de saúde criptografados com **AES-256-GCM**.
 - Hashes de senhas com o algoritmo padrão de segurança **Argon2id**.
@@ -94,6 +104,26 @@ O container aplicará as migrações do banco e executará o seed inicial de dad
 - **API REST**: `http://localhost:3333`
 - **Swagger / OpenAPI**: `http://localhost:3333/docs`
 - **PostgreSQL / PostGIS**: porta `5433` (mapeada para a porta interna `5432`)
+
+---
+
+### ⚙️ Configurações de Ambiente (`backend/.env`)
+
+Copie o arquivo de exemplo para criar seu `.env`:
+```bash
+cp backend/.env.example backend/.env
+```
+
+| Variável | Descrição | Padrão no Exemplo |
+|---|---|---|
+| `PORT` | Porta HTTP da API backend | `3333` |
+| `DATABASE_URL` | Conexão PostgreSQL + PostGIS | `postgresql://...:5433/daprair_db...` |
+| `JWT_SECRET` | Chave secreta dos tokens JWT | `(mínimo 32 caracteres)` |
+| `ENCRYPTION_KEY` | Chave AES-256-GCM para dados sensíveis e coordenadas | `(64 caracteres hex / 32 bytes)` |
+| `ADMIN_EMAILS` | E-mails que recebem automaticamente `role: 'ADMIN'` ao se cadastrar ou logar (separados por vírgula) | `admin@daprair.com` |
+| `GOOGLE_PLACES_API_KEY` | Chave da API Google Places (opcional em mock) | `""` |
+| `GOOGLE_PLACES_DAILY_LIMIT` | Limite diário de requisições Places para controle de custos | `30` |
+| `ENABLE_AUTO_GOOGLE_PLACES_SYNC` | Sincronização automática em segundo plano | `false` |
 
 ---
 

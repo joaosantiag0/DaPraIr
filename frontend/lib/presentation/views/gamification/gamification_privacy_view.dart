@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../bloc/auth/auth_bloc.dart';
 import '../../bloc/gamification/gamification_bloc.dart';
 import '../../bloc/gamification/gamification_event.dart';
 import '../../bloc/gamification/gamification_state.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../components/accessible_button.dart';
+import '../auth/login_screen.dart';
 
 class GamificationPrivacyView extends StatefulWidget {
   const GamificationPrivacyView({super.key});
@@ -20,7 +24,10 @@ class _GamificationPrivacyViewState extends State<GamificationPrivacyView> {
   @override
   void initState() {
     super.initState();
-    context.read<GamificationBloc>().add(LoadGamificationProfile());
+    final authState = context.read<AuthBloc>().state;
+    if (authState is Authenticated) {
+      context.read<GamificationBloc>().add(LoadGamificationProfile());
+    }
   }
 
   @override
@@ -31,6 +38,63 @@ class _GamificationPrivacyViewState extends State<GamificationPrivacyView> {
 
   @override
   Widget build(BuildContext context) {
+    final authState = context.watch<AuthBloc>().state;
+    if (authState is! Authenticated) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Privacidade no Ranking (LGPD)'),
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: const BoxDecoration(
+                    color: AppColors.primaryContainer,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.shield_outlined,
+                    color: AppColors.primaryBlue,
+                    size: 48,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Configurações de Privacidade',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Faça login para gerenciar sua visibilidade no ranking e preferências de privacidade LGPD.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                AccessibleButton(
+                  label: 'Entrar ou Criar Conta',
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const LoginScreen()),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Privacidade no Ranking (LGPD)'),

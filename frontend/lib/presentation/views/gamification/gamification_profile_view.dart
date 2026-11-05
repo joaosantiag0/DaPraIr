@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../bloc/auth/auth_bloc.dart';
 import '../../bloc/gamification/gamification_bloc.dart';
 import '../../bloc/gamification/gamification_event.dart';
 import '../../bloc/gamification/gamification_state.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../components/accessible_button.dart';
 import '../../components/level_badge_widget.dart';
+import '../auth/login_screen.dart';
 
 class GamificationProfileView extends StatefulWidget {
   const GamificationProfileView({super.key});
@@ -16,13 +20,72 @@ class _GamificationProfileViewState extends State<GamificationProfileView> {
   @override
   void initState() {
     super.initState();
-    context.read<GamificationBloc>().add(LoadGamificationProfile());
-    context.read<GamificationBloc>().add(const LoadTransactionsHistory());
+    final authState = context.read<AuthBloc>().state;
+    if (authState is Authenticated) {
+      context.read<GamificationBloc>().add(LoadGamificationProfile());
+      context.read<GamificationBloc>().add(const LoadTransactionsHistory());
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final authState = context.watch<AuthBloc>().state;
+
+    if (authState is! Authenticated) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Meu Nível e Pontuação'),
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: const BoxDecoration(
+                    color: AppColors.primaryContainer,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.military_tech_rounded,
+                    color: AppColors.primaryBlue,
+                    size: 48,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Acompanhe seus Pontos e Conquistas',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Faça login para pontuar em avaliações e tópicos, desbloquear insígnias e acompanhar seu nível.',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                AccessibleButton(
+                  label: 'Entrar ou Criar Conta',
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const LoginScreen()),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(

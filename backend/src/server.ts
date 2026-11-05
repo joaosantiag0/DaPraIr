@@ -20,6 +20,7 @@ import { eventsRoutes } from './modules/events/events.routes.js';
 import { reportsRoutes } from './modules/reports/reports.routes.js';
 import { feedRoutes } from './modules/feed/feed.routes.js';
 import { forumRoutes } from './modules/forum/forum.routes.js';
+import { adminRoutes } from './modules/admin/admin.routes.js';
 
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
@@ -124,6 +125,7 @@ export async function buildApp(): Promise<FastifyInstance> {
       await api.register(reviewsRoutes);
       await api.register(mediaRoutes);
       await api.register(forumRoutes);
+      await api.register(adminRoutes);
     },
     { prefix: '/api/v1' }
   );

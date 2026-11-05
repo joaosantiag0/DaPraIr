@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../bloc/profile/profile_bloc.dart';
+import '../../bloc/auth/auth_bloc.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../components/accessible_button.dart';
 import '../../components/responsive_container.dart';
 import 'account_data_governance_screen.dart';
+import '../admin/admin_dashboard_view.dart';
 
 class ProfilePrivacySettingsScreen extends StatefulWidget {
   final bool isAuthenticated;
@@ -236,6 +238,80 @@ class _ProfilePrivacySettingsScreenState extends State<ProfilePrivacySettingsScr
                 const SizedBox(height: 28),
                 const Divider(color: AppColors.borderLight),
                 const SizedBox(height: 16),
+
+                // Admin / Moderator Panel Entry
+                BlocBuilder<AuthBloc, AuthState>(
+                  builder: (context, authState) {
+                    if (authState is Authenticated &&
+                        (authState.user.role == 'ADMIN' || authState.user.role == 'MODERATOR')) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 16.0),
+                        child: Card(
+                          elevation: 0.5,
+                          color: AppColors.primaryContainer.withOpacity(0.3),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            side: const BorderSide(color: AppColors.primaryBlue, width: 1.2),
+                          ),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(16),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const AdminDashboardView(),
+                                ),
+                              );
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: const BoxDecoration(
+                                      color: AppColors.primaryContainer,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.admin_panel_settings,
+                                      color: AppColors.primaryBlue,
+                                      size: 24,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 14),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Painel de Controle e Moderação',
+                                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                                fontWeight: FontWeight.bold,
+                                                color: AppColors.primaryBlue,
+                                              ),
+                                        ),
+                                        const SizedBox(height: 3),
+                                        Text(
+                                          'Gerenciar denúncias, conteúdos, usuários e auditoria',
+                                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                color: AppColors.textSecondary,
+                                              ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const Icon(Icons.chevron_right, color: AppColors.primaryBlue),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  },
+                ),
 
                 // Link to second screen (Account & Data Governance)
                 Card(

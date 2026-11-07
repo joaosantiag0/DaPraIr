@@ -54,6 +54,7 @@ void main() {
     expect(find.text('Anonimizar e Excluir Minha Conta'), findsNothing);
 
     // Tap to open secondary screen
+    await tester.ensureVisible(find.text('Gerenciamento de Dados e Conta'));
     await tester.tap(find.text('Gerenciamento de Dados e Conta'));
     await tester.pumpAndSettle();
 

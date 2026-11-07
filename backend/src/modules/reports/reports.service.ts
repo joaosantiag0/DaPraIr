@@ -1,5 +1,6 @@
 import { prisma } from '../../core/database/prisma.js';
 import { BadRequestError, NotFoundError } from '../../core/errors/app-error.js';
+import { adminService } from '../admin/admin.service.js';
 
 export interface CreateReportDTO {
   reporterId: string;
@@ -98,19 +99,22 @@ export class ReportsService {
     ]);
 
     return {
-      reports: reports.map((r) => ({
-        id: r.id,
-        reporter: r.reporter,
-        targetType: r.target_type,
-        targetId: r.target_id,
-        reason: r.reason,
-        details: r.details,
-        status: r.status,
-        createdAt: r.created_at,
-        resolver: r.resolver,
-        resolvedAt: r.resolved_at,
-        resolutionNotes: r.resolution_notes,
-      })),
+      reports: await Promise.all(
+        reports.map(async (r) => ({
+          id: r.id,
+          reporter: r.reporter,
+          targetType: r.target_type,
+          targetId: r.target_id,
+          reason: r.reason,
+          details: r.details,
+          status: r.status,
+          createdAt: r.created_at,
+          resolver: r.resolver,
+          resolvedAt: r.resolved_at,
+          resolutionNotes: r.resolution_notes,
+          targetContent: await adminService.fetchTargetContent(r.target_type, r.target_id),
+        }))
+      ),
       total,
     };
   }

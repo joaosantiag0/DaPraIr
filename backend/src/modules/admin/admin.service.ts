@@ -63,17 +63,132 @@ export class AdminService {
       total,
       limit,
       offset,
-      items: items.map((r) => ({
-        id: r.id,
-        targetType: r.target_type,
-        targetId: r.target_id,
-        reason: r.reason,
-        details: r.details,
-        status: r.status,
-        reporterMaskedName: r.reporter ? `${r.reporter.name.slice(0, 2)}***` : 'Anônimo',
-        createdAt: r.created_at.toISOString(),
-      })),
+      items: await Promise.all(
+        items.map(async (r) => ({
+          id: r.id,
+          targetType: r.target_type,
+          targetId: r.target_id,
+          reason: r.reason,
+          details: r.details,
+          status: r.status,
+          reporterMaskedName: r.reporter ? `${r.reporter.name.slice(0, 2)}***` : 'Anônimo',
+          createdAt: r.created_at.toISOString(),
+          targetContent: await this.fetchTargetContent(r.target_type, r.target_id),
+        }))
+      ),
     };
+  }
+
+  async fetchTargetContent(targetType: string, targetId: string) {
+    try {
+      if (targetType === 'FORUM_TOPIC') {
+        const topic = await prisma.forumTopic.findUnique({
+          where: { id: targetId },
+          include: { author: { select: { id: true, name: true, handle: true } } },
+        });
+        if (!topic) return null;
+        return {
+          id: topic.id,
+          title: topic.title,
+          content: topic.content,
+          status: topic.status,
+          author: topic.author,
+          createdAt: topic.created_at.toISOString(),
+        };
+      } else if (targetType === 'FORUM_COMMENT') {
+        const comment = await prisma.forumComment.findUnique({
+          where: { id: targetId },
+          include: {
+            author: { select: { id: true, name: true, handle: true } },
+            topic: { select: { id: true, title: true } },
+          },
+        });
+        if (!comment) return null;
+        return {
+          id: comment.id,
+          content: comment.content,
+          status: comment.status,
+          author: comment.author,
+          topicTitle: comment.topic?.title,
+          createdAt: comment.created_at.toISOString(),
+        };
+      } else if (targetType === 'PLACE_REVIEW' || targetType === 'REVIEW') {
+        const review = await prisma.placeReview.findUnique({
+          where: { id: targetId },
+          include: {
+            user: { select: { id: true, name: true, handle: true } },
+            place: { select: { id: true, name: true, address: true } },
+          },
+        });
+        if (!review) return null;
+        return {
+          id: review.id,
+          generalComment: review.general_comment,
+          averageScore: Number(review.average_score),
+          status: review.status,
+          author: review.user,
+          placeName: review.place?.name,
+          placeAddress: review.place?.address,
+          createdAt: review.created_at.toISOString(),
+        };
+      } else if (targetType === 'PLACE_MEDIA' || targetType === 'MEDIA') {
+        const media = await prisma.placeMedia.findUnique({
+          where: { id: targetId },
+          include: {
+            user: { select: { id: true, name: true, handle: true } },
+            place: { select: { id: true, name: true } },
+          },
+        });
+        if (!media) return null;
+        return {
+          id: media.id,
+          mediaUrl: media.media_url,
+          thumbnailUrl: media.thumbnail_url,
+          altText: media.alt_text,
+          mimeType: media.mime_type,
+          status: media.status,
+          author: media.user,
+          placeName: media.place?.name,
+          createdAt: media.created_at.toISOString(),
+        };
+      } else if (targetType === 'USER') {
+        const user = await prisma.user.findUnique({
+          where: { id: targetId },
+          select: { id: true, name: true, handle: true, role: true, status: true, email: true },
+        });
+        return user;
+      } else if (targetType === 'EVENT') {
+        const event = await prisma.event.findUnique({
+          where: { id: targetId },
+          include: { user: { select: { id: true, name: true, handle: true } } },
+        });
+        if (!event) return null;
+        return {
+          id: event.id,
+          title: event.title,
+          description: event.description,
+          status: event.status,
+          locationName: event.location_name,
+          author: event.user,
+          startTime: event.start_time.toISOString(),
+        };
+      } else if (targetType === 'MESSAGE') {
+        const msg = await prisma.directMessage.findUnique({
+          where: { id: targetId },
+          include: { sender: { select: { id: true, name: true, handle: true } } },
+        });
+        if (!msg) return null;
+        return {
+          id: msg.id,
+          content: msg.content,
+          sender: msg.sender,
+          createdAt: msg.created_at.toISOString(),
+        };
+      }
+    } catch {
+      return null;
+    }
+    return null;
   }
 
   async getReportDetails(id: string) {
@@ -90,29 +205,7 @@ export class AdminService {
       throw new NotFoundError('Denúncia não encontrada');
     }
 
-    // Fetch contextual target content
-    let targetContent: any = null;
-    if (report.target_type === 'FORUM_TOPIC') {
-      targetContent = await prisma.forumTopic.findUnique({
-        where: { id: report.target_id },
-        include: { author: { select: { id: true, name: true, handle: true } } },
-      });
-    } else if (report.target_type === 'FORUM_COMMENT') {
-      targetContent = await prisma.forumComment.findUnique({
-        where: { id: report.target_id },
-        include: { author: { select: { id: true, name: true, handle: true } } },
-      });
-    } else if (report.target_type === 'PLACE_REVIEW') {
-      targetContent = await prisma.placeReview.findUnique({
-        where: { id: report.target_id },
-        include: { user: { select: { id: true, name: true, handle: true } } },
-      });
-    } else if (report.target_type === 'USER') {
-      targetContent = await prisma.user.findUnique({
-        where: { id: report.target_id },
-        select: { id: true, name: true, handle: true, role: true, status: true },
-      });
-    }
+    const targetContent = await this.fetchTargetContent(report.target_type, report.target_id);
 
     const priorReportsCount = await prisma.contentReport.count({
       where: {

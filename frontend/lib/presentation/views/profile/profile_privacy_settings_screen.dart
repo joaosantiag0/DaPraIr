@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -48,7 +49,28 @@ class _ProfilePrivacySettingsScreenState extends State<ProfilePrivacySettingsScr
   Widget build(BuildContext context) {
     if (!widget.isAuthenticated) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Privacidade e Dados')),
+        appBar: AppBar(
+          title: const Text('Privacidade e Dados'),
+          actions: [
+            if (kDebugMode)
+              Semantics(
+                button: true,
+                label: 'Acessar Painel de Moderação e Administração (Dev)',
+                child: IconButton(
+                  icon: const Icon(Icons.admin_panel_settings, color: AppColors.primaryBlue),
+                  tooltip: 'Painel de Administração (Dev)',
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const AdminDashboardView(),
+                      ),
+                    );
+                  },
+                ),
+              ),
+          ],
+        ),
         body: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
           child: ResponsiveContainer.medium(
@@ -105,7 +127,34 @@ class _ProfilePrivacySettingsScreenState extends State<ProfilePrivacySettingsScr
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Privacidade e Dados')),
+      appBar: AppBar(
+        title: const Text('Privacidade e Dados'),
+        actions: [
+          BlocBuilder<AuthBloc, AuthState>(
+            builder: (context, authState) {
+              final isPrivileged = authState is Authenticated &&
+                  (authState.user.role == 'ADMIN' || authState.user.role == 'MODERATOR');
+              if (!isPrivileged) return const SizedBox.shrink();
+              return Semantics(
+                button: true,
+                label: 'Acessar Painel de Moderação e Administração',
+                child: IconButton(
+                  icon: const Icon(Icons.admin_panel_settings, color: AppColors.primaryBlue),
+                  tooltip: 'Painel de Administração',
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const AdminDashboardView(),
+                      ),
+                    );
+                  },
+                ),
+              );
+            },
+          ),
+        ],
+      ),
       body: BlocConsumer<ProfileBloc, ProfileState>(
         listener: (context, state) {
           if (state is ProfileLoaded) {
@@ -245,78 +294,7 @@ class _ProfilePrivacySettingsScreenState extends State<ProfilePrivacySettingsScr
                 const SizedBox(height: 16),
 
                 // Admin / Moderator Panel Entry
-                BlocBuilder<AuthBloc, AuthState>(
-                  builder: (context, authState) {
-                    if (authState is Authenticated &&
-                        (authState.user.role == 'ADMIN' || authState.user.role == 'MODERATOR')) {
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 16.0),
-                        child: Card(
-                          elevation: 0.5,
-                          color: AppColors.primaryContainer.withValues(alpha: 0.3),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            side: const BorderSide(color: AppColors.primaryBlue, width: 1.2),
-                          ),
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(16),
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const AdminDashboardView(),
-                                ),
-                              );
-                            },
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(10),
-                                    decoration: const BoxDecoration(
-                                      color: AppColors.primaryContainer,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Icon(
-                                      Icons.admin_panel_settings,
-                                      color: AppColors.primaryBlue,
-                                      size: 24,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 14),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          'Painel de Controle e Moderação',
-                                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                                fontWeight: FontWeight.bold,
-                                                color: AppColors.primaryBlue,
-                                              ),
-                                        ),
-                                        const SizedBox(height: 3),
-                                        Text(
-                                          'Gerenciar denúncias, conteúdos, usuários e auditoria',
-                                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                                color: AppColors.textSecondary,
-                                              ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const Icon(Icons.chevron_right, color: AppColors.primaryBlue),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    }
-                    return const SizedBox.shrink();
-                  },
-                ),
+                _buildAdminPanelEntry(context),
 
                 // Ranking & Gamification Entry
                 Card(
@@ -740,6 +718,107 @@ class _ProfilePrivacySettingsScreenState extends State<ProfilePrivacySettingsScr
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildAdminPanelEntry(BuildContext context) {
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (context, authState) {
+        final isPrivileged = authState is Authenticated &&
+            (authState.user.role == 'ADMIN' || authState.user.role == 'MODERATOR');
+        if (!isPrivileged) return const SizedBox.shrink();
+
+        final roleLabel = (authState is Authenticated &&
+                authState.user.role.isNotEmpty &&
+                authState.user.role != 'USER')
+            ? authState.user.role
+            : 'ADMIN / MOD';
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 16.0),
+          child: Card(
+            elevation: 1,
+            color: AppColors.primaryContainer.withValues(alpha: 0.4),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: const BorderSide(color: AppColors.primaryBlue, width: 1.5),
+            ),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const AdminDashboardView(),
+                  ),
+                );
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: const BoxDecoration(
+                        color: AppColors.primaryBlue,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.admin_panel_settings,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                'Painel de Controle e Moderação',
+                                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.primaryBlue,
+                                    ),
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primaryBlue,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  roleLabel,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            'Gerenciar denúncias, conteúdos, usuários e auditoria',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: AppColors.textSecondary,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.chevron_right, color: AppColors.primaryBlue),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 

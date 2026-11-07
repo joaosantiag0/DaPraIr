@@ -54,6 +54,12 @@ class FakeAdminRepository implements AdminRepository {
       status: 'PENDING',
       reporterMaskedName: 'u***1',
       createdAt: DateTime(2026, 11, 5),
+      targetContent: const {
+        'id': 'top-test-1',
+        'title': 'Tópico de Teste Spam',
+        'content': 'Compre produtos promocionais ilegais agora!',
+        'author': {'name': 'Spammer Test', 'handle': 'spammer'},
+      },
     );
   }
 
@@ -267,6 +273,34 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(AdminAuditView), findsOneWidget);
       expect(find.text('CONTENT_HIDE'), findsOneWidget);
+    });
+
+    testWidgets('allows viewing reported content directly in reports queue', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: AdminDashboardView(repository: repository),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Check card has Content block and button
+      expect(find.text('Conteúdo Denunciado'), findsOneWidget);
+      final viewContentBtn = find.widgetWithText(TextButton, 'Visualizar Conteúdo');
+      expect(viewContentBtn, findsOneWidget);
+
+      // Tap button to view content dialog
+      await tester.tap(viewContentBtn);
+      await tester.pumpAndSettle();
+
+      // Dialog opens showing reported content
+      expect(find.text('Tópico de Teste Spam'), findsOneWidget);
+      expect(find.text('Compre produtos promocionais ilegais agora!'), findsOneWidget);
+      expect(find.text('Autor: Spammer Test @spammer'), findsOneWidget);
+
+      // Dialog can be closed
+      await tester.tap(find.text('Fechar'));
+      await tester.pumpAndSettle();
+      expect(find.text('Compre produtos promocionais ilegais agora!'), findsNothing);
     });
   });
 }

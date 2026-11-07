@@ -74,11 +74,10 @@ class AdminReportsActionSuccess extends AdminReportsState {
 
 // BLoC
 class AdminReportsBloc extends Bloc<AdminReportsEvent, AdminReportsState> {
-  final AdminRepository _repository;
+  final AdminRepository repository;
 
-  AdminReportsBloc({required AdminRepository repository})
-      : _repository = repository,
-        super(AdminReportsInitial()) {
+  AdminReportsBloc({required this.repository})
+      : super(AdminReportsInitial()) {
     on<LoadReportsEvent>(_onLoadReports);
     on<ResolveReportEvent>(_onResolveReport);
   }
@@ -89,7 +88,7 @@ class AdminReportsBloc extends Bloc<AdminReportsEvent, AdminReportsState> {
   ) async {
     emit(AdminReportsLoading());
     try {
-      final reports = await _repository.listReports(
+      final reports = await repository.listReports(
         status: event.status,
         targetType: event.targetType,
       );
@@ -104,7 +103,7 @@ class AdminReportsBloc extends Bloc<AdminReportsEvent, AdminReportsState> {
     Emitter<AdminReportsState> emit,
   ) async {
     try {
-      await _repository.resolveReport(
+      await repository.resolveReport(
         reportId: event.reportId,
         action: event.action,
         resolutionNotes: event.resolutionNotes,

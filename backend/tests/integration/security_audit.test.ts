@@ -430,4 +430,265 @@ describe('Security Audit Suite - DáPraIr?', () => {
       expect(res.headers['x-frame-options']).toBe('SAMEORIGIN');
     });
   });
+
+  describe('9. Account Suspension & Session Invalidation Across Standard Endpoints', () => {
+    it('immediately blocks a SUSPENDED user from posting reviews or forum topics even with valid JWT', async () => {
+      // 1. Create active user & sign token
+      const suspendedUser = await prisma.user.create({
+        data: {
+          email: `suspended_${Date.now()}@test.com`,
+          name: 'Suspended User',
+          handle: `suspended_${Date.now()}`,
+          role: 'USER',
+          status: 'ACTIVE',
+        },
+      });
+
+      const token = app.jwt.sign({
+        id: suspendedUser.id,
+        email: suspendedUser.email,
+        role: suspendedUser.role,
+        handle: suspendedUser.handle,
+      });
+
+      // 2. Suspend the user in the database
+      await prisma.user.update({
+        where: { id: suspendedUser.id },
+        data: { status: 'SUSPENDED' },
+      });
+
+      // 3. Attempt to post review
+      const reviewRes = await app.inject({
+        method: 'POST',
+        url: `/api/v1/places/${testPlaceId}/reviews`,
+        headers: { authorization: `Bearer ${token}` },
+        payload: {
+          ratings: [{ criterionCode: 'CALCADA_ACESSO', score: 5 }],
+        },
+      });
+      expect(reviewRes.statusCode).toBe(401);
+      expect(reviewRes.json().message).toMatch(/suspensa|banida|inativa/i);
+
+      // 4. Attempt to post forum topic
+      const cat = await prisma.forumCategory.findFirst();
+      const topicRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/forum/topics',
+        headers: { authorization: `Bearer ${token}` },
+        payload: {
+          category_id: cat!.id,
+          title: 'Tentativa por usuário suspenso',
+          content: 'Mensagem que deve ser terminantemente bloqueada',
+        },
+      });
+      expect(topicRes.statusCode).toBe(401);
+      expect(topicRes.json().message).toMatch(/suspensa|banida|inativa/i);
+    });
+
+    it('rejects authentication when session_invalidated_at is newer than token issue time', async () => {
+      // Create user with iat in the past
+      const user = await prisma.user.create({
+        data: {
+          email: `revoked_${Date.now()}@test.com`,
+          name: 'Revoked User',
+          handle: `revoked_${Date.now()}`,
+          role: 'USER',
+          status: 'ACTIVE',
+        },
+      });
+
+      const token = app.jwt.sign(
+        {
+          id: user.id,
+          email: user.email,
+          role: user.role,
+          handle: user.handle,
+          iat: Math.floor(Date.now() / 1000) - 300, // 5 minutes ago
+        }
+      );
+
+      // Invalidate session now
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { session_invalidated_at: new Date() },
+      });
+
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/v1/users/me/accessibility-profile',
+        headers: { authorization: `Bearer ${token}` },
+      });
+
+      expect(res.statusCode).toBe(401);
+      expect(res.json().message).toMatch(/Sessão revogada/i);
+    });
+  });
+
+  describe('10. RBAC Role Synchronization & Privilege Control', () => {
+    it('dynamically elevates a user promoted in DB to MODERATOR without requiring token re-signing', async () => {
+      const promoUser = await prisma.user.create({
+        data: {
+          email: `promo_${Date.now()}@test.com`,
+          name: 'Promoted User',
+          handle: `promo_${Date.now()}`,
+          role: 'USER',
+          status: 'ACTIVE',
+        },
+      });
+
+      // Token generated while role was 'USER'
+      const token = app.jwt.sign({
+        id: promoUser.id,
+        email: promoUser.email,
+        role: 'USER',
+        handle: promoUser.handle,
+      });
+
+      // Initially blocked
+      const blockedRes = await app.inject({
+        method: 'GET',
+        url: '/api/v1/reports',
+        headers: { authorization: `Bearer ${token}` },
+      });
+      expect(blockedRes.statusCode).toBe(403);
+
+      // Promote in DB
+      await prisma.user.update({
+        where: { id: promoUser.id },
+        data: { role: 'MODERATOR' },
+      });
+
+      // Now allowed because DB role is synchronized
+      const allowedRes = await app.inject({
+        method: 'GET',
+        url: '/api/v1/reports',
+        headers: { authorization: `Bearer ${token}` },
+      });
+      expect(allowedRes.statusCode).toBe(200);
+    });
+
+    it('immediately revokes access if a MODERATOR is demoted to USER in the database', async () => {
+      const demoteUser = await prisma.user.create({
+        data: {
+          email: `demote_${Date.now()}@test.com`,
+          name: 'Demoted User',
+          handle: `demote_${Date.now()}`,
+          role: 'MODERATOR',
+          status: 'ACTIVE',
+        },
+      });
+
+      // Token generated while role was 'MODERATOR'
+      const token = app.jwt.sign({
+        id: demoteUser.id,
+        email: demoteUser.email,
+        role: 'MODERATOR',
+        handle: demoteUser.handle,
+      });
+
+      // Demote in DB to USER
+      await prisma.user.update({
+        where: { id: demoteUser.id },
+        data: { role: 'USER' },
+      });
+
+      // Must be rejected with 403 Forbidden
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/v1/reports',
+        headers: { authorization: `Bearer ${token}` },
+      });
+      expect(res.statusCode).toBe(403);
+    });
+  });
+
+  describe('11. Input Bounds & Denial of Service Protection', () => {
+    it('rejects excessively large forum topic content (>20000 chars)', async () => {
+      const cat = await prisma.forumCategory.findFirst();
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/forum/topics',
+        headers: { authorization: `Bearer ${regularUserToken}` },
+        payload: {
+          category_id: cat!.id,
+          title: 'Tópico Gigante DoS',
+          content: 'A'.repeat(25000),
+        },
+      });
+
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('rejects oversized review comments (>3000 chars)', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/v1/places/${testPlaceId}/reviews`,
+        headers: { authorization: `Bearer ${regularUserToken}` },
+        payload: {
+          generalComment: 'B'.repeat(3500),
+          ratings: [{ criterionCode: 'CALCADA_ACESSO', score: 4 }],
+        },
+      });
+
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('rejects unbounded spatial search radius (>50000m)', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/v1/places?latitude=-23.55&longitude=-46.63&radiusMeters=99999999',
+      });
+
+      expect(res.statusCode).toBe(400);
+    });
+  });
+
+  describe('12. User Privacy & Ownership Consistency', () => {
+    it('allows a user to view their own accessibility profile via public profile endpoint even if set to PRIVATE', async () => {
+      const user = await prisma.user.create({
+        data: {
+          email: `priv_${Date.now()}@test.com`,
+          name: 'Private Profile User',
+          handle: `priv_${Date.now()}`,
+          role: 'USER',
+          status: 'ACTIVE',
+        },
+      });
+
+      await prisma.userAccessibilityProfile.create({
+        data: {
+          user_id: user.id,
+          disability_types: ['Cadeirante'],
+          assistance_needs: ['Rampa'],
+          visibility: 'PRIVATE',
+        },
+      });
+
+      // 1. Another user views it -> must be null
+      const viewerRes = await app.inject({
+        method: 'GET',
+        url: `/api/v1/users/${user.id}`,
+        headers: { authorization: `Bearer ${regularUserToken}` },
+      });
+      expect(viewerRes.statusCode).toBe(200);
+      expect(viewerRes.json().accessibilityProfile).toBeNull();
+
+      // 2. The owner views it -> must be visible to themselves
+      const ownerToken = app.jwt.sign({
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        handle: user.handle,
+      });
+
+      const ownerRes = await app.inject({
+        method: 'GET',
+        url: `/api/v1/users/${user.id}`,
+        headers: { authorization: `Bearer ${ownerToken}` },
+      });
+      expect(ownerRes.statusCode).toBe(200);
+      expect(ownerRes.json().accessibilityProfile).not.toBeNull();
+      expect(ownerRes.json().accessibilityProfile.disabilityTypes).toContain('Cadeirante');
+    });
+  });
 });

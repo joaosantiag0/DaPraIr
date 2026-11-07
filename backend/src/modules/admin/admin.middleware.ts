@@ -41,6 +41,9 @@ export async function requireAdminOrModerator(request: FastifyRequest, _reply: F
   if (user.role !== 'ADMIN' && user.role !== 'MODERATOR') {
     throw new ForbiddenError('Acesso restrito a administradores e moderadores');
   }
+
+  // Synchronize decoded user role with current database role
+  request.user.role = user.role;
 }
 
 export async function requireAdmin(request: FastifyRequest, _reply: FastifyReply) {

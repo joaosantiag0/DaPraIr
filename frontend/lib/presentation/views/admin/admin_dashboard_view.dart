@@ -134,11 +134,11 @@ class _AdminDashboardViewState extends State<AdminDashboardView>
             Expanded(
               child: TabBarView(
                 controller: _tabController,
-                children: const [
-                  AdminReportsQueueView(),
-                  AdminContentView(),
-                  AdminUsersView(),
-                  AdminAuditView(),
+                children: [
+                  AdminReportsQueueView(repository: _repository),
+                  const AdminContentView(),
+                  const AdminUsersView(),
+                  const AdminAuditView(),
                 ],
               ),
             ),

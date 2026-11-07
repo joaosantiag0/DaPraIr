@@ -117,6 +117,7 @@ export class PrivacyService {
           encrypted_location: null,
           is_anonymous: true,
           status: 'DELETED',
+          session_invalidated_at: new Date(),
         },
       });
     });

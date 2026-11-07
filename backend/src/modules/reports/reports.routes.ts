@@ -1,7 +1,6 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { reportsService } from './reports.service.js';
-import { prisma } from '../../core/database/prisma.js';
-import { ForbiddenError } from '../../core/errors/app-error.js';
+import { requireAdminOrModerator } from '../admin/admin.middleware.js';
 import { z } from 'zod';
 
 const createReportSchema = z.object({
@@ -17,19 +16,7 @@ const resolveReportSchema = z.object({
 });
 
 export async function reportsRoutes(app: FastifyInstance) {
-  const requireModerator = async (request: FastifyRequest) => {
-    let role = request.user.role;
-    if (!role) {
-      const user = await prisma.user.findUnique({
-        where: { id: request.user.id },
-        select: { role: true },
-      });
-      role = user?.role || 'USER';
-    }
-    if (role !== 'MODERATOR' && role !== 'ADMIN') {
-      throw new ForbiddenError('Acesso restrito: apenas moderadores e administradores têm permissão para acessar a fila de moderação');
-    }
-  };
+  const moderatorGuard = [app.authenticate, requireAdminOrModerator];
 
   // File a report (FR-023, FR-024)
   app.post(
@@ -51,7 +38,7 @@ export async function reportsRoutes(app: FastifyInstance) {
   // Moderation queue: list reports (MODERATOR/ADMIN only)
   app.get(
     '/reports',
-    { preHandler: [app.authenticate, requireModerator] },
+    { preHandler: moderatorGuard },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { status, limit = 20, offset = 0 } = request.query as any;
       const result = await reportsService.listReports({
@@ -66,7 +53,7 @@ export async function reportsRoutes(app: FastifyInstance) {
   // Moderation action (MODERATOR/ADMIN only)
   app.patch(
     '/reports/:id',
-    { preHandler: [app.authenticate, requireModerator] },
+    { preHandler: moderatorGuard },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const body = resolveReportSchema.parse(request.body);

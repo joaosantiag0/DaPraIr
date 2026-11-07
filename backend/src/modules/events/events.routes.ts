@@ -5,15 +5,15 @@ import { z } from 'zod';
 const createEventSchema = z.object({
   placeId: z.string().uuid().optional(),
   title: z.string().min(3).max(150),
-  description: z.string().min(10),
+  description: z.string().min(10).max(5000),
   startTime: z.string().datetime(),
   endTime: z.string().datetime(),
-  locationName: z.string().min(2),
-  address: z.string().min(5),
-  latitude: z.number().optional(),
-  longitude: z.number().optional(),
+  locationName: z.string().min(2).max(200),
+  address: z.string().min(5).max(300),
+  latitude: z.number().min(-90).max(90).optional(),
+  longitude: z.number().min(-180).max(180).optional(),
   accessibilityChecklist: z.record(z.boolean()),
-  maxAttendees: z.number().int().positive().optional(),
+  maxAttendees: z.number().int().positive().max(100000).optional(),
 });
 
 const rsvpSchema = z.object({

@@ -22,6 +22,8 @@ import { eventsRoutes } from './modules/events/events.routes.js';
 import { reportsRoutes } from './modules/reports/reports.routes.js';
 import { feedRoutes } from './modules/feed/feed.routes.js';
 import { forumRoutes } from './modules/forum/forum.routes.js';
+import { gamificationRoutes } from './modules/gamification/gamification.routes.js';
+import { adminRoutes } from './modules/admin/admin.routes.js';
 
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
@@ -42,7 +44,19 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   // CORS
   await app.register(fastifyCors, {
-    origin: true,
+    origin: (origin, cb) => {
+      // In test or development without origin header, allow
+      if (config.NODE_ENV !== 'production' || !origin) {
+        return cb(null, true);
+      }
+      const allowed = process.env.CORS_ALLOWED_ORIGINS
+        ? process.env.CORS_ALLOWED_ORIGINS.split(',').map((o) => o.trim())
+        : [];
+      if (allowed.length === 0 || allowed.includes(origin)) {
+        return cb(null, true);
+      }
+      return cb(new Error('Origem não permitida pela política CORS'), false);
+    },
     credentials: true,
   });
 
@@ -168,6 +182,8 @@ export async function buildApp(): Promise<FastifyInstance> {
       await api.register(reviewsRoutes);
       await api.register(mediaRoutes);
       await api.register(forumRoutes);
+      await api.register(gamificationRoutes);
+      await api.register(adminRoutes);
     },
     { prefix: '/api/v1' }
   );

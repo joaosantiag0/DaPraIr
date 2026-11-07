@@ -23,6 +23,8 @@ model User {
   created_at    DateTime  @default(now()) @db.Timestamptz
   updated_at    DateTime  @default(now()) @updatedAt @db.Timestamptz
 
+  session_invalidated_at DateTime? @db.Timestamptz
+
   consents              UserConsent[]
   accessibility_profile UserAccessibilityProfile?
   reviews               PlaceReview[]
@@ -42,6 +44,12 @@ model User {
   forum_comment_replies ForumComment[]            @relation("UserForumCommentReplies")
   forum_topic_likes     ForumTopicLike[]
   forum_comment_likes   ForumCommentLike[]
+  gamification_profile  UserGamificationProfile?
+  gamification_transactions GamificationTransaction[]
+  penalties_received    UserPenalty[]             @relation("UserPenaltiesReceived")
+  penalties_issued      UserPenalty[]             @relation("AdminPenaltiesIssued")
+  penalties_revoked     UserPenalty[]             @relation("AdminPenaltiesRevoked")
+  moderation_actions    ModerationAction[]        @relation("AdminModerationActions")
 
   @@map("users")
 }
@@ -398,3 +406,97 @@ model ForumCommentLike {
   @@index([comment_id])
   @@map("forum_comment_likes")
 }
+
+model UserGamificationProfile {
+  id                     String            @id @default(uuid()) @db.Uuid
+  user_id                String            @unique @db.Uuid
+  points_total           Int               @default(0)
+  points_current         Int               @default(0)
+  current_level_id       String            @default("EXPLORER") @db.VarChar(50)
+  is_ranking_visible     Boolean           @default(true)
+  use_anonymous_nickname Boolean           @default(false)
+  custom_nickname        String?           @db.VarChar(50)
+  created_at             DateTime          @default(now()) @db.Timestamptz
+  updated_at             DateTime          @default(now()) @updatedAt @db.Timestamptz
+
+  user                   User              @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  level                  GamificationLevel @relation(fields: [current_level_id], references: [id])
+
+  @@index([is_ranking_visible, points_total(sort: Desc)])
+  @@map("user_gamification_profiles")
+}
+
+model GamificationTransaction {
+  id          String   @id @default(uuid()) @db.Uuid
+  user_id     String   @db.Uuid
+  action_type String   @db.VarChar(50) // AVALIACAO_LOCAL, BONUS_FOTO, BONUS_UTILIDADE, TOPICO_FORUM, RESPOSTA_UTIL, ESTORNO
+  points      Int
+  source_id   String?  @db.Uuid
+  source_type String?  @db.VarChar(50) // REVIEW, MEDIA, FORUM_TOPIC, FORUM_COMMENT
+  description String   @db.VarChar(255)
+  created_at  DateTime @default(now()) @db.Timestamptz
+
+  user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, action_type, source_id])
+  @@index([user_id, created_at(sort: Desc)])
+  @@index([created_at, points])
+  @@map("gamification_transactions")
+}
+
+model GamificationLevel {
+  id             String                    @id @db.VarChar(50) // EXPLORER, COLLABORATOR, MAPPER, SPECIALIST, AMBASSADOR
+  name           String                    @db.VarChar(100)
+  min_points     Int                       @unique
+  level_order    Int                       @unique
+  badge_icon_url String?                   @db.VarChar(512)
+  description    String                    @db.Text
+  created_at     DateTime                  @default(now()) @db.Timestamptz
+  updated_at     DateTime                  @default(now()) @updatedAt @db.Timestamptz
+
+  profiles       UserGamificationProfile[]
+
+  @@map("gamification_levels")
+}
+
+model UserPenalty {
+  id                String    @id @default(uuid()) @db.Uuid
+  user_id           String    @db.Uuid
+  moderator_id      String    @db.Uuid
+  penalty_type      String    @db.VarChar(30) // WARNING, SUSPENSION_7_DAYS, PERMANENT_BAN
+  reason            String    @db.Text
+  starts_at         DateTime  @default(now()) @db.Timestamptz
+  ends_at           DateTime? @db.Timestamptz
+  status            String    @default("ACTIVE") @db.VarChar(20) // ACTIVE, EXPIRED, REVOKED
+  revoked_by        String?   @db.Uuid
+  revocation_reason String?   @db.Text
+  created_at        DateTime  @default(now()) @db.Timestamptz
+
+  user      User  @relation("UserPenaltiesReceived", fields: [user_id], references: [id], onDelete: Cascade)
+  moderator User  @relation("AdminPenaltiesIssued", fields: [moderator_id], references: [id], onDelete: Restrict)
+  revoker   User? @relation("AdminPenaltiesRevoked", fields: [revoked_by], references: [id], onDelete: SetNull)
+
+  @@index([user_id, status])
+  @@index([status, ends_at])
+  @@map("user_penalties")
+}
+
+model ModerationAction {
+  id           String   @id @default(uuid()) @db.Uuid
+  moderator_id String   @db.Uuid
+  action_type  String   @db.VarChar(40) // HIDE_CONTENT, RESTORE_CONTENT, DELETE_CONTENT, WARN_USER, SUSPEND_USER, BAN_USER, UNBAN_USER, DISMISS_REPORT, RESOLVE_REPORT
+  target_type  String   @db.VarChar(30) // FORUM_TOPIC, FORUM_COMMENT, PLACE_REVIEW, PLACE_MEDIA, USER, REPORT
+  target_id    String   @db.Uuid
+  reason       String   @db.Text
+  metadata     Json?
+  created_at   DateTime @default(now()) @db.Timestamptz
+
+  moderator User @relation("AdminModerationActions", fields: [moderator_id], references: [id], onDelete: Restrict)
+
+  @@index([target_type, target_id])
+  @@index([moderator_id, created_at(sort: Desc)])
+  @@index([action_type, created_at(sort: Desc)])
+  @@map("moderation_actions")
+}
+
+

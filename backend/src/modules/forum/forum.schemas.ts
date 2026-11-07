@@ -35,7 +35,7 @@ export const queryCategoriesSchema = z.object({
 export const createTopicSchema = z.object({
   category_id: z.string().uuid(),
   title: z.string().min(5).max(200),
-  content: z.string().min(10),
+  content: z.string().min(10).max(20000),
   visibility: VisibilityEnum.default('PUBLIC'),
 });
 
@@ -50,7 +50,7 @@ export const queryTopicsSchema = z.object({
 
 export const updateTopicSchema = z.object({
   title: z.string().min(5).max(200).optional(),
-  content: z.string().min(10).optional(),
+  content: z.string().min(10).max(20000).optional(),
   visibility: VisibilityEnum.optional(),
 });
 

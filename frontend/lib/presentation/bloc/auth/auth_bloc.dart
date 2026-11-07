@@ -1,7 +1,23 @@
+import 'dart:convert';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:frontend/core/base/equatable.dart';
 import '../../../domain/entities/user_profile.dart';
 import '../../../domain/repositories/auth_repository.dart';
+
+Map<String, dynamic>? _decodeJwtPayload(String token) {
+  try {
+    final parts = token.split('.');
+    if (parts.length != 3) return null;
+    var payload = parts[1].replaceAll('-', '+').replaceAll('_', '/');
+    while (payload.length % 4 != 0) {
+      payload += '=';
+    }
+    final jsonStr = utf8.decode(base64Decode(payload));
+    return json.decode(jsonStr) as Map<String, dynamic>;
+  } catch (_) {
+    return null;
+  }
+}
 
 // Events
 abstract class AuthEvent extends Equatable {
@@ -68,6 +84,21 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<CheckAuthStatusEvent>((event, emit) async {
       final token = await repository.getStoredToken();
       if (token != null) {
+        final payload = _decodeJwtPayload(token);
+        if (payload != null) {
+          emit(
+            Authenticated(
+              UserProfile(
+                id: payload['id']?.toString() ?? 'current',
+                name: payload['name']?.toString() ?? (payload['email']?.toString() ?? 'Usuário'),
+                email: payload['email']?.toString() ?? '',
+                handle: payload['handle']?.toString() ?? '@usuario',
+                role: payload['role']?.toString() ?? 'USER',
+              ),
+            ),
+          );
+          return;
+        }
         emit(const Authenticated(UserProfile(id: 'current', name: 'Usuário', email: '', handle: '@usuario')));
       } else {
         emit(Unauthenticated());

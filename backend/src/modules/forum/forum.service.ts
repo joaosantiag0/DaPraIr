@@ -1,5 +1,6 @@
 import { prisma } from '../../core/database/prisma.js';
 import { Prisma } from '@prisma/client';
+import { gamificationService } from '../gamification/gamification.service.js';
 
 export class ForumService {
   async listCategories(filters?: { is_active?: boolean }) {
@@ -172,7 +173,7 @@ export class ForumService {
       throw new Error('Category not found or inactive');
     }
 
-    return prisma.$transaction(async (tx) => {
+    const createdTopic = await prisma.$transaction(async (tx) => {
       const topic = await tx.forumTopic.create({
         data: {
           category_id: data.category_id,
@@ -202,6 +203,22 @@ export class ForumService {
         is_liked_by_me: false,
       };
     });
+
+    // Award gamification points for forum topic creation (+10 pts)
+    try {
+      await gamificationService.awardPoints({
+        userId: authorId,
+        actionType: 'TOPICO_FORUM',
+        points: 10,
+        sourceId: createdTopic.id,
+        sourceType: 'FORUM_TOPIC',
+        description: `Criação de tópico no fórum: ${createdTopic.title}`,
+      });
+    } catch (err) {
+      console.error('Failed to award gamification points for forum topic:', err);
+    }
+
+    return createdTopic;
   }
 
   async toggleTopicLike(userId: string, topicId: string) {

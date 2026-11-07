@@ -119,7 +119,9 @@ export class UsersService {
     const profile = user.accessibility_profile;
 
     if (profile) {
-      if (profile.visibility === 'PUBLIC') {
+      if (viewerUserId === targetUserId) {
+        showAccessibility = true;
+      } else if (profile.visibility === 'PUBLIC') {
         showAccessibility = true;
       } else if (profile.visibility === 'FRIENDS_ONLY' && viewerUserId) {
         // Check accepted friendship

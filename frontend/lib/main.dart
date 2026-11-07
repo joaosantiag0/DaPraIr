@@ -12,6 +12,7 @@ import 'data/repositories/events_repository_impl.dart';
 import 'data/repositories/feed_repository_impl.dart';
 import 'data/repositories/reports_repository_impl.dart';
 import 'data/repositories/forum_repository_impl.dart';
+import 'data/repositories/gamification_repository_impl.dart';
 import 'domain/repositories/auth_repository.dart';
 import 'domain/repositories/places_repository.dart';
 import 'domain/repositories/user_repository.dart';
@@ -21,6 +22,7 @@ import 'domain/repositories/events_repository.dart';
 import 'domain/repositories/feed_repository.dart';
 import 'domain/repositories/reports_repository.dart';
 import 'domain/repositories/forum_repository.dart';
+import 'domain/repositories/gamification_repository.dart';
 import 'presentation/bloc/auth/auth_bloc.dart';
 import 'presentation/bloc/places/places_bloc.dart';
 import 'presentation/bloc/reviews/reviews_bloc.dart';
@@ -30,7 +32,11 @@ import 'presentation/bloc/events/events_bloc.dart';
 import 'presentation/bloc/feed/feed_bloc.dart';
 import 'presentation/bloc/profile/profile_bloc.dart';
 import 'presentation/bloc/forum/forum_bloc.dart';
+import 'presentation/bloc/gamification/gamification_bloc.dart';
 import 'presentation/views/home/main_navigation_screen.dart';
+import 'presentation/views/gamification/leaderboard_view.dart';
+import 'presentation/views/gamification/gamification_profile_view.dart';
+import 'presentation/views/gamification/gamification_privacy_view.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -120,6 +126,9 @@ class _DaPraIrAppState extends State<DaPraIrApp> {
         RepositoryProvider<PlacesRepository>.value(value: placesRepo),
         RepositoryProvider<AuthRepository>.value(value: authRepo),
         RepositoryProvider<ForumRepository>.value(value: forumRepo),
+        RepositoryProvider<GamificationRepository>.value(
+          value: GamificationRepositoryImpl(dio: dioClient.dio),
+        ),
       ],
       child: MultiBlocProvider(
         providers: [
@@ -153,6 +162,11 @@ class _DaPraIrAppState extends State<DaPraIrApp> {
           BlocProvider<ForumBloc>(
             create: (_) => ForumBloc(forumRepository: forumRepo),
           ),
+          BlocProvider<GamificationBloc>(
+            create: (_) => GamificationBloc(
+              repository: GamificationRepositoryImpl(dio: dioClient.dio),
+            ),
+          ),
         ],
         child: MaterialApp(
           title: 'DáPraIr?',
@@ -162,6 +176,11 @@ class _DaPraIrAppState extends State<DaPraIrApp> {
             onToggleHighContrast: toggleHighContrast,
             isHighContrast: _isHighContrast,
           ),
+          routes: {
+            '/gamification/leaderboard': (_) => const LeaderboardView(),
+            '/gamification/profile': (_) => const GamificationProfileView(),
+            '/gamification/privacy': (_) => const GamificationPrivacyView(),
+          },
         ),
       ),
     );

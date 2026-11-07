@@ -44,6 +44,16 @@ Built in accordance with Brazilian accessibility standard **ABNT NBR 9050** and 
 - **Automatic Quarantine**: items receiving 3+ distinct reports are instantly hidden from public feeds pending human moderation.
 - Rules onboarding on the user's first post: active encouragement to report violations, and explicit guidance that political and religious extremism should be avoided and is subject to removal.
 
+### 🛠️ Admin Panel & Moderation Governance
+- Moderation queue with resolution actions (approve, warn, suspend, ban, and immediate session revocation).
+- Active penalties management, unified content moderation, and tamper-resistant audit logs.
+- Automatic admin elevation configured via `ADMIN_EMAILS` environment variable.
+
+### 🏆 Gamification & Community Leaderboard
+- Point rewards for verified accessibility reviews, helpful photos, and constructive community participation.
+- Leaderboard with monthly, all-time, and friends rankings, accessible directly from the user profile screen.
+- Privacy toggle allowing public or anonymous participation on the leaderboard.
+
 ### 🔒 LGPD Compliance & Privacy by Design
 - Sensitive health conditions and precise coordinates encrypted using **AES-256-GCM**.
 - Passwords hashed with state-of-the-art **Argon2id**.
@@ -94,6 +104,26 @@ The container automatically waits for PostgreSQL health checks, runs `prisma db 
 - **REST API**: `http://localhost:3333`
 - **Swagger / OpenAPI Documentation**: `http://localhost:3333/docs`
 - **PostgreSQL / PostGIS**: port `5433` (mapped to container port `5432`)
+
+---
+
+### ⚙️ Environment Configuration (`backend/.env`)
+
+Copy the sample environment file to create your `.env`:
+```bash
+cp backend/.env.example backend/.env
+```
+
+| Variable | Description | Default in Example |
+|---|---|---|
+| `PORT` | Backend HTTP API port | `3333` |
+| `DATABASE_URL` | PostgreSQL + PostGIS connection string | `postgresql://...:5433/daprair_db...` |
+| `JWT_SECRET` | Secret key for JWT signing | `(minimum 32 characters)` |
+| `ENCRYPTION_KEY` | AES-256-GCM key for health data & precise coordinates | `(64 hex characters / 32 bytes)` |
+| `ADMIN_EMAILS` | Comma-separated list of emails auto-elevated to `role: 'ADMIN'` upon registration or login | `admin@daprair.com` |
+| `GOOGLE_PLACES_API_KEY` | Optional Google Places API Key | `""` |
+| `GOOGLE_PLACES_DAILY_LIMIT` | Daily Places API request cap to keep costs at zero | `30` |
+| `ENABLE_AUTO_GOOGLE_PLACES_SYNC` | Automatic background grid sync | `false` |
 
 ---
 

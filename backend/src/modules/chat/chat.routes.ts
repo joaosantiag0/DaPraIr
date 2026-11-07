@@ -1,6 +1,7 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { chatService } from './chat.service.js';
 import { chatWsManager } from './chat.websocket.js';
+import { prisma } from '../../core/database/prisma.js';
 import { z } from 'zod';
 
 const sendMessageSchema = z.object({
@@ -50,7 +51,7 @@ export async function chatRoutes(app: FastifyInstance) {
   );
 
   // Real-time WebSocket connection
-  app.get('/chat/ws', { websocket: true }, (connection, req) => {
+  app.get('/chat/ws', { websocket: true }, async (connection, req) => {
     const ws = ((connection as any).socket ?? connection) as any;
     const token = (req.query as any)?.token;
     if (!token) {
@@ -59,7 +60,25 @@ export async function chatRoutes(app: FastifyInstance) {
     }
 
     try {
-      const decoded = app.jwt.verify<{ id: string }>(token);
+      const decoded = app.jwt.verify<{ id: string; iat?: number }>(token);
+      const user = await prisma.user.findUnique({
+        where: { id: decoded.id },
+        select: { status: true, session_invalidated_at: true },
+      });
+
+      if (!user || user.status !== 'ACTIVE') {
+        ws.close(1008, 'Conta inativa ou suspensa');
+        return;
+      }
+
+      if (user.session_invalidated_at && decoded.iat) {
+        const invalidatedAtSeconds = Math.floor(user.session_invalidated_at.getTime() / 1000);
+        if (decoded.iat < invalidatedAtSeconds) {
+          ws.close(1008, 'Sessão revogada');
+          return;
+        }
+      }
+
       chatWsManager.registerSocket(decoded.id, ws);
     } catch {
       ws.close(1008, 'Token inválido');
